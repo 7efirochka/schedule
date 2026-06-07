@@ -51,11 +51,17 @@ function getSummary(empId: number) {
   return parts.join(' / ')
 }
 
+type StatusKey = 'work' | 'vacation' | 'sick' | 'day_off'
+
+function getStatusConfig(empId: number, date: string) {
+  const status = store.getStatus(empId, date) as StatusKey
+  return statusConfig[status] ?? statusConfig['work']
+    }
+
 const activeCell = ref<{empId: number, date: string} | null>(null)
 
 function openDropdown(empId: number, day: number) {
   const date = getDateString(day)
-  console.log('clicked empId:', empId, 'day:', day, 'date:', getDateString(day))
   if (activeCell.value?.empId === empId && activeCell.value?.date === date) {
     activeCell.value = null
   } else {
@@ -65,7 +71,7 @@ function openDropdown(empId: number, day: number) {
 
 async function selectStatus(status: string) {
   if (!activeCell.value) return
-  console.log('updating:', activeCell.value.empId, activeCell.value.date, status)
+  console.log('selectStatus called:', activeCell.value, status)
   await store.updateStatus(activeCell.value.empId, activeCell.value.date, status)
   activeCell.value = null
 }
@@ -112,14 +118,14 @@ function closeDropdown() {
                   :key="day"
                   :class="{ weekend: weekends.includes(day) }"
                   :style="!weekends.includes(day) ? {
-                    background: statusConfig[store.getStatus(emp.id, getDateString(day))].bg,
-                    color: statusConfig[store.getStatus(emp.id, getDateString(day))].color
+                    background: getStatusConfig(emp.id, getDateString(day)).bg,
+                    color: getStatusConfig(emp.id, getDateString(day)).color
                   } : {}"
                   class="status-cell"
                   style="position: relative"
                   @click.stop="!weekends.includes(day) && openDropdown(emp.id, day)"
                 >
-                  {{ weekends.includes(day) ? '' : statusConfig[store.getStatus(emp.id, getDateString(day))].label }}
+                  {{ weekends.includes(day) ? '' : getStatusConfig(emp.id, getDateString(day)).label }}
 
                   <div
                     v-if="activeCell?.empId === emp.id && activeCell?.date === getDateString(day)"
