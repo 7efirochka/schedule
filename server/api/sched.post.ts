@@ -1,6 +1,4 @@
-// import { PrismaClient } from '@prisma/client'
-
-// const prisma = new PrismaClient()
+// import { prisma } from '../utils/prisma'
 
 // export default defineEventHandler(async (event) => {
 //   const query = getQuery(event)
@@ -20,3 +18,18 @@
 //   })
 //   return schedule
 // })
+
+import { db } from '~/server/utils/db'
+
+export default defineEventHandler(async (event) => {
+  const body = await readBody(event)
+  const { employee_id, date, status } = body
+
+  await db.query(`
+    INSERT INTO schedule (employee_id, date, status)
+    VALUES (?, ?, ?)
+    ON DUPLICATE KEY UPDATE status = ?
+  `, [employee_id, date, status, status])
+
+  return { success: true }
+})
