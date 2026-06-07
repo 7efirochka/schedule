@@ -50,10 +50,33 @@ function getSummary(empId: number) {
   if (day_off) parts.push(`${day_off}уд`)
   return parts.join(' / ')
 }
+
+const activeCell = ref<{empId: number, date: string} | null>(null)
+
+function openDropdown(empId: number, day: number) {
+  const date = getDateString(day)
+  console.log('clicked empId:', empId, 'day:', day, 'date:', getDateString(day))
+  if (activeCell.value?.empId === empId && activeCell.value?.date === date) {
+    activeCell.value = null
+  } else {
+    activeCell.value = { empId, date }
+  }
+}
+
+async function selectStatus(status: string) {
+  if (!activeCell.value) return
+  console.log('updating:', activeCell.value.empId, activeCell.value.date, status)
+  await store.updateStatus(activeCell.value.empId, activeCell.value.date, status)
+  activeCell.value = null
+}
+
+function closeDropdown() {
+  activeCell.value = null
+}
 </script>
 
 <template>
-  <div>
+  <div @click="closeDropdown">
     <div class="legend">
       <span class="legend-item" style="background:#EAF3DE;color:#27500A">Работа</span>
       <span class="legend-item" style="background:#E6F1FB;color:#0C447C">Отпуск</span>
@@ -84,18 +107,36 @@ function getSummary(empId: number) {
             </tr>
             <tr v-for="emp in emps" :key="emp.id">
               <td class="name-cell">{{ emp.name }}</td>
-              <td
-                v-for="day in days"
-                :key="day"
-                :class="{ weekend: weekends.includes(day) }"
-                :style="!weekends.includes(day) ? {
-                  background: statusConfig[store.getStatus(emp.id, getDateString(day))].bg,
-                  color: statusConfig[store.getStatus(emp.id, getDateString(day))].color
-                } : {}"
-                class="status-cell"
-              >
-                {{ weekends.includes(day) ? '' : statusConfig[store.getStatus(emp.id, getDateString(day))].label }}
-              </td>
+                <td
+                  v-for="day in days"
+                  :key="day"
+                  :class="{ weekend: weekends.includes(day) }"
+                  :style="!weekends.includes(day) ? {
+                    background: statusConfig[store.getStatus(emp.id, getDateString(day))].bg,
+                    color: statusConfig[store.getStatus(emp.id, getDateString(day))].color
+                  } : {}"
+                  class="status-cell"
+                  style="position: relative"
+                  @click.stop="!weekends.includes(day) && openDropdown(emp.id, day)"
+                >
+                  {{ weekends.includes(day) ? '' : statusConfig[store.getStatus(emp.id, getDateString(day))].label }}
+
+                  <div
+                    v-if="activeCell?.empId === emp.id && activeCell?.date === getDateString(day)"
+                    class="dropdown"
+                  >
+                    <div
+                      v-for="(cfg, key) in statusConfig"
+                      :key="key"
+                      class="dropdown-item"
+                      :style="{ background: cfg.bg, color: cfg.color }"
+                      @click.stop="selectStatus(key)"
+                    >
+                      {{ cfg.label }} —
+                      {{ key === 'work' ? 'Работа' : key === 'vacation' ? 'Отпуск' : key === 'sick' ? 'Больничный' : 'Отгул' }}
+                    </div>
+                  </div>
+                </td>
               <td class="sum-cell">{{ getSummary(emp.id) }}</td>
             </tr>
           </template>
@@ -123,7 +164,7 @@ function getSummary(empId: number) {
 table {
   border-collapse: collapse;
   font-size: 12px;
-  white-space: nowrap;
+  width: 90%
 }
 th {
   background: #f3f4f6;
@@ -175,5 +216,27 @@ td.dept-row {
   letter-spacing: 0.05em;
   padding: 4px 10px;
   text-align: left;
+}
+
+
+.dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 100;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  min-width: 130px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.dropdown-item {
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.dropdown-item:hover {
+  filter: brightness(0.95);
 }
 </style>

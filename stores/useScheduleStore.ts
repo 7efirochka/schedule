@@ -20,13 +20,15 @@ export const useScheduleStore = defineStore('schedule', {
     },
 
     getStatus(employeeId: number, date: string) {
-      const record = this.schedule.find(
-        s => s.employee_id === employeeId && s.date.startsWith(date)
-      )
+      const record = this.schedule.find(s => {
+        const recordDate = s.date
+        return s.employee_id === employeeId && recordDate === date
+      })
       return record ? record.status : 'work'
     },
 
     async updateStatus(employeeId: number, date: string, status: string) {
+      console.log('updateStatus called:', employeeId, date, status)
       await $fetch('/api/sched', {
         method: 'POST',
         body: { employee_id: employeeId, date, status }

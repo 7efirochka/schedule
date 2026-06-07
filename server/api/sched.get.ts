@@ -24,7 +24,7 @@ export default defineEventHandler(async (event) => {
   const month = query.month as string
 
   const [rows] = await db.query(`
-    SELECT s.id, s.employee_id, s.date, s.status
+    SELECT id, employee_id, DATE_FORMAT(date, '%Y-%m-%d') as date, status
     FROM schedule s
     WHERE DATE_FORMAT(s.date, '%Y-%m') = ?
   `, [month])
