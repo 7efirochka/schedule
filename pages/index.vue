@@ -1,5 +1,11 @@
 <script setup lang="ts">
+
+definePageMeta({
+  middleware: 'auth'
+})
+
 const store = useScheduleStore()
+const authStore = useAuthStore()
 
 onMounted(async () => {
   await store.fetchEmployees()
@@ -61,6 +67,8 @@ function getStatusConfig(empId: number, date: string) {
 const activeCell = ref<{empId: number, date: string} | null>(null)
 
 function openDropdown(empId: number, day: number) {
+  if (authStore.user?.id !== empId) return
+
   const date = getDateString(day)
   if (activeCell.value?.empId === empId && activeCell.value?.date === date) {
     activeCell.value = null
@@ -71,7 +79,6 @@ function openDropdown(empId: number, day: number) {
 
 async function selectStatus(status: string) {
   if (!activeCell.value) return
-  console.log('selectStatus called:', activeCell.value, status)
   await store.updateStatus(activeCell.value.empId, activeCell.value.date, status)
   activeCell.value = null
 }

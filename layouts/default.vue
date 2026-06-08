@@ -1,3 +1,12 @@
+<script setup lang = "ts">
+  const authStore = useAuthStore()
+
+  function logout() {
+    authStore.logout()
+    navigateTo('/login')
+  }
+</script  >
+
 <template>
   <div>
     <header class="topbar">
@@ -10,6 +19,7 @@
           <NuxtLink to="/employees" class="nav-tab">Сотрудники</NuxtLink>
         </nav>
         <div class="topbar-right">
+          <button class="btn-logout" @click='logout'>Выйти</button>
           <select class="month-select">
             <option>Июль 2026</option>
             <option>Август 2026</option>
@@ -79,5 +89,18 @@
   padding: 20px 24px;
   background: #f5f5f5;
   min-height: calc(100vh - 52px);
+}
+
+.btn-logout {
+  font-size: 13px;
+  padding: 6px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #1a1a1a;
+  cursor: pointer;
+}
+.btn-logout:hover {
+  background: #f3f4f6;
 }
 </style>
