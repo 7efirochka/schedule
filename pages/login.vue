@@ -10,7 +10,6 @@ const authStore = useAuthStore()
             method: "POST",
             body: { email: email.value }
         })
-        console.log("Пользователь найден")
         authStore.setUser(data)
         navigateTo("/")
         } catch (e) {

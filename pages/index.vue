@@ -1,28 +1,55 @@
 <script setup lang="ts">
-
-definePageMeta({
-  middleware: 'auth'
-})
-
 const store = useScheduleStore()
 const authStore = useAuthStore()
 
+const days_week = ["вс","пн","вт","ср","чт","пт","сб"]
+
 onMounted(async () => {
+  store.generateMonths()
   await store.fetchEmployees()
   await store.fetchSchedule()
 })
 
-const days = Array.from({ length: 31 }, (_, i) => i + 1)
+const currentDate = computed(() => {
+  const [year, month] = store.currentMonth.split('-').map(Number)
+  return { year, month }
+})
 
-const dayNames = ['ср','чт','пт','сб','вс','пн','вт','ср','чт','пт','сб','вс','пн','вт','ср','чт','пт','сб','вс','пн','вт','ср','чт','пт','сб','вс','пн','вт','ср','чт','пт']
+const days_month = computed(() => new Date(currentDate.value.year, currentDate.value.month, 0).getDate())
 
-const weekends = [5, 6, 12, 13, 19, 20, 26, 27]
+const days = computed(() => Array.from({ length: days_month.value }, (_, i) => i + 1))
+
+const dayNames = computed(() => {
+  const names = []
+  for (let i = 1; i <= days_month.value; i++) {
+    const date = new Date(currentDate.value.year, currentDate.value.month - 1, i)
+    names.push(days_week[date.getDay()])
+  }
+  return names
+})
+
+const weekends = computed(() => {
+  const w = []
+  for (let i = 1; i <= days_month.value; i++) {
+    const date = new Date(currentDate.value.year, currentDate.value.month - 1, i)
+    if (date.getDay() === 0 || date.getDay() === 6) w.push(i)
+  }
+  return w
+})
+
 
 const statusConfig = {
   work:     { label: 'Р',  bg: '#EAF3DE', color: '#27500A' },
+  day_off:  { label: 'Уд', bg: '#FAEEDA', color: '#633806' },
   vacation: { label: 'От', bg: '#E6F1FB', color: '#0C447C' },
   sick:     { label: 'Б',  bg: '#FAECE7', color: '#712B13' },
-  day_off:  { label: 'Уд', bg: '#FAEEDA', color: '#633806' },
+}
+
+const progressConfig = {
+  work:     '#9AF797',
+  day_off:  '#F0A884',
+  vacation: '#8DCAF2',
+  sick:     '#F55B5B',
 }
 
 const departments = computed(() => {
@@ -36,25 +63,19 @@ const departments = computed(() => {
 })
 
 function getDateString(day: number) {
-  return `2026-07-${String(day).padStart(2, '0')}`
+  return `${store.currentMonth}-${String(day).padStart(2, '0')}`
 }
 
-function getSummary(empId: number) {
-  let work = 0, vacation = 0, sick = 0, day_off = 0
-  days.forEach(d => {
-    if (weekends.includes(d)) return
-    const s = store.getStatus(empId, getDateString(d))
-    if (s === 'work') work++
-    else if (s === 'vacation') vacation++
-    else if (s === 'sick') sick++
-    else if (s === 'day_off') day_off++
-  })
-  const parts = []
-  if (work) parts.push(`${work}р`)
-  if (vacation) parts.push(`${vacation}от`)
-  if (sick) parts.push(`${sick}б`)
-  if (day_off) parts.push(`${day_off}уд`)
-  return parts.join(' / ')
+function getCount(empId: number, status: string) {
+  return days.value.filter(d => {
+    if (weekends.value.includes(d)) return false
+    return store.getStatus(empId, getDateString(d)) === status
+  }).length
+}
+
+function getPercent(empId: number, status: string) {
+  const workingDays = days.value.filter(d => !weekends.value.includes(d)).length
+  return (getCount(empId, status) / workingDays) * 100
 }
 
 type StatusKey = 'work' | 'vacation' | 'sick' | 'day_off'
@@ -92,9 +113,9 @@ function closeDropdown() {
   <div @click="closeDropdown">
     <div class="legend">
       <span class="legend-item" style="background:#EAF3DE;color:#27500A">Работа</span>
+      <span class="legend-item" style="background:#FAEEDA;color:#633806">Удалённая работа</span>
       <span class="legend-item" style="background:#E6F1FB;color:#0C447C">Отпуск</span>
       <span class="legend-item" style="background:#FAECE7;color:#712B13">Больничный</span>
-      <span class="legend-item" style="background:#FAEEDA;color:#633806">Отгул</span>
     </div>
 
     <div class="table-wrap">
@@ -146,11 +167,23 @@ function closeDropdown() {
                       @click.stop="selectStatus(key)"
                     >
                       {{ cfg.label }} —
-                      {{ key === 'work' ? 'Работа' : key === 'vacation' ? 'Отпуск' : key === 'sick' ? 'Больничный' : 'Отгул' }}
+                      {{ key === 'work' ? 'Работа' : key === 'vacation' ? 'Отпуск' : key === 'sick' ? 'Больничный' : 'Удаленка' }}
                     </div>
                   </div>
                 </td>
-              <td class="sum-cell">{{ getSummary(emp.id) }}</td>
+                <td class="sum-cell">
+                  <div class="progress-bar">
+                    <div
+                      v-for="(cfg, key) in statusConfig"
+                      :key="key"
+                      :style="{
+                        width: getPercent(emp.id, key) + '%',
+                        background: progressConfig[key],
+                      }"
+                      :title="key + ': ' + getCount(emp.id, key) + ' дн.'"
+                    ></div>
+                  </div>
+                </td>
             </tr>
           </template>
         </tbody>
@@ -173,6 +206,7 @@ function closeDropdown() {
 }
 .table-wrap {
   overflow-x: auto;
+  
 }
 table {
   border-collapse: collapse;
@@ -229,6 +263,26 @@ td.dept-row {
   letter-spacing: 0.05em;
   padding: 4px 10px;
   text-align: left;
+}
+
+td.sum-cell {
+  background: #f3f4f6;
+  padding: 0 8px;
+  min-width: 100px;
+  vertical-align: middle;
+}
+
+.progress-bar {
+  display: flex;
+  flex-direction: row;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  width: 100%;
+  background: #e5e7eb;
+}
+.progress-bar div {
+  height: 100%;
 }
 
 
