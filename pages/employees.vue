@@ -1,4 +1,5 @@
 <script setup lang="ts">
+
 definePageMeta({
   middleware: 'auth'
 })
@@ -14,40 +15,34 @@ const currentDate = computed(() => {
 const monthName = computed(() => {
   const date = new Date(currentDate.value.year, currentDate.value.month - 1, 1)
   return date.toLocaleString('ru', { month: 'long' }).toUpperCase()
-})  
-
-const daysInMonth = computed(() => new Date(currentDate.value.year, currentDate.value.month, 0).getDate())
+})
 
 const firstDayOfMonth = computed(() => {
   const day = new Date(currentDate.value.year, currentDate.value.month - 1, 1).getDay()
   return day === 0 ? 6 : day - 1
 })
 
+const daysInMonth = new Date(currentDate.value.year, currentDate.value.month, 0).getDate()
 
 const selectedDays = ref<Set<number>>(new Set())
 const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 
+
 const calendarCells = computed(() => {
   const cells: (number | null)[] = []
-  const firstDay = new Date(currentDate.value.year, currentDate.value.month -1, 1).getDay()
+  const firstDay = new Date(currentDate.value.year, currentDate.value.month-1, 1).getDay()
   const start = firstDay === 0 ? 6 : firstDay - 1
   for (let i = 0; i < start; i++) cells.push(null)
-  for (let i = 1; i <= daysInMonth.value; i++) cells.push(i)
+  for (let i = 1; i <= daysInMonth; i++) cells.push(i)
   while (cells.length % 7 !== 0) cells.push(null)
   return cells
 })
 
-function isWeekend(day: number) {
-  const date = new Date(currentDate.value.year, currentDate.value.month-1, day)
-  return date.getDay() === 0 || date.getDay() === 6
-}
-
-
 const statusConfig = {
-  work:    { label: 'Работа',          bg: '#EAF3DE', color: '#27500A', dot: '#639922' },
-  day_off: { label: 'Удалённая работа', bg: '#FAEEDA', color: '#633806', dot: '#854F0B' },
-  vacation:{ label: 'Отпуск',          bg: '#E6F1FB', color: '#0C447C', dot: '#185FA5' },
-  sick:    { label: 'Больничный',       bg: '#FAECE7', color: '#712B13', dot: '#993C1D' },
+  work:     { label: 'Работа',           bg: '#EAF3DE', color: '#27500A', dot: '#639922' },
+  day_off:  { label: 'Удалённая работа', bg: '#FAEEDA', color: '#633806', dot: '#854F0B' },
+  vacation: { label: 'Отпуск',           bg: '#E6F1FB', color: '#0C447C', dot: '#185FA5' },
+  sick:     { label: 'Больничный',       bg: '#FAECE7', color: '#712B13', dot: '#993C1D' },
 }
 
 type StatusKey = 'work' | 'vacation' | 'sick' | 'day_off'
@@ -64,24 +59,35 @@ onMounted(async () => {
   await store.fetchSchedule()
 })
 
+function isWeekend(day: number) {
+  const date = new Date(currentDate.value.year, currentDate.value.month - 1, day)
+  return date.getDay() === 0 || date.getDay() === 6
+}
+
 const activeDropdown = ref<number | null>(null)
 
-function onClick(day: number){
+function onClick(day: number) {
   if (isWeekend(day)) return
-  if (activeDropdown.value == day) {
+  if (activeDropdown.value === day) {
     activeDropdown.value = null
   } else {
     activeDropdown.value = day
   }
 }
 
-function closeDropdown(){
+async function selectStatus(status: string) {
+  if (activeDropdown.value === null) return
+  await store.updateStatus(authStore.user.id, getDateString(activeDropdown.value), status)
+  activeDropdown.value = null
+}
+
+function closeDropdown() {
   activeDropdown.value = null
 }
 
 function prevMonth() {
-  const [year, month] = store.currentMonth.split("-").map(Number)
-  const date = new Date(year, month -2, 1)
+  const [year, month] = store.currentMonth.split('-').map(Number)
+  const date = new Date(year, month - 2, 1)
   store.setMonth(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`)
 }
 
@@ -91,59 +97,19 @@ function nextMonth() {
   store.setMonth(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`)
 }
 
-async function selectStatus(status: string) {
-  if (activeDropdown.value === null) return
-  await store.updateStatus(authStore.user.id, getDateString(activeDropdown.value), status)
-  activeDropdown.value = null
-}
-
-const isDragging = ref(false)
-const dragStart = ref<number | null>(null)
-
-function onMouseDown(day: number) {
-  if (isWeekend(day)) return
-  isDragging.value = true
-  dragStart.value = day
-  selectedDays.value = new Set([day])
-  activeDropdown.value = null
-}
-
-function onMouseEnter(day: number) {
-  if (!isDragging.value || dragStart.value === null) return
-  if (isWeekend(day)) return
-  const start = Math.min(dragStart.value, day)
-  const end = Math.max(dragStart.value, day)
-  const newSelected = new Set<number>()
-  for (let d = start; d <= end; d++) {
-    if (!isWeekend(d)) newSelected.add(d)
-  }
-  selectedDays.value = newSelected
-}
-
-function onMouseUp() {
-  if (!isDragging.value) return
-  isDragging.value = false
-  dragStart.value = null
-}
-
-async function applyBulkStatus(status: string) {
-  for (const day of selectedDays.value) {
-    await store.updateStatus(authStore.user.id, getDateString(day), status)
-  }
-  selectedDays.value = new Set()
-}
-
 </script>
 
+
+
 <template>
-  <div @click="closeDropdown" @mouseup="onMouseUp" class="calendar-page">
+  <div @click="closeDropdown" class="calendar-page">
     <div class="cal-header">
-      <button class="arrow-btn" @click.stop="prevMonth">‹</button>
+      <button @click.stop="prevMonth" class="arrow-btn">‹</button>
       <div class="cal-title">
-        <span class="cal-month">{{ monthName }}</span>
-        <span class="cal-year">{{ currentDate.year }}</span>
+        <span class="cal-month">{{  monthName }}</span>
+        <span class="cal-year">2026</span>
       </div>
-      <button class="arrow-btn" @click.stop="nextMonth">›</button>
+      <button @click.stop="nextMonth" class="arrow-btn">›</button>
     </div>
 
     <div class="cal-grid">
@@ -157,56 +123,47 @@ async function applyBulkStatus(status: string) {
           empty: day === null,
           weekend: day && isWeekend(day),
           selected: day && selectedDays.has(day),
-        }",
+        }"
         @click.stop="day && onClick(day)"
-        @mousedown.prevent="day && onMouseDown(day)"
-        @mouseenter="day && onMouseEnter(day)"
         :style="[
         day && !isWeekend(day) ? { background: statusConfig[getCellStatus(day)].bg } : {},
-        { zIndex: activeDropdown === day ? 50 : 1,
-        position: 'relative'}
+        { zIndex: activeDropdown === day ? 50 : 1, position: 'relative' }
       ]"
       >
         <span v-if="day" class="cal-day-num">{{ day }}</span>
-        <span v-if="day && !isWeekend(day)" 
-        class="cal-status-dot"
-        :style="{ background: statusConfig[getCellStatus(day)].dot }"
-        ></span>
-
+        <span v-if="day && !isWeekend(day)"
+         class="cal-status-dot"
+         :style="{ background: statusConfig[getCellStatus(day)].dot }"
+         ></span>
       <div
         v-if="activeDropdown !== null && activeDropdown === day"
         class="cal-dropdown"
         @click.stop
       >
-        <div
-          v-for="(cfg, key) in statusConfig"
-          :key="key"
-          class="cal-dropdown-item"
-          :style="{ background: cfg.bg, color: cfg.color }"
-          @click.stop="selectStatus(key)"
-        >
-          {{ cfg.label }}
-        </div>
-    </div>
-    </div>
-    </div>
-
-
-      <div v-if="selectedDays.size > 1" class="bulk-bar" @click.stop>
-        <span class="bulk-count">Выбрано дней: {{ selectedDays.size }}</span>
-        <div class="bulk-actions">
           <div
-            v-for="(cfg, key) in statusConfig"
-            :key="key"
-            class="bulk-btn"
-            :style="{ background: cfg.bg, color: cfg.color }"
-            @click="applyBulkStatus(key)"
-          >
-            {{ cfg.label }}
-          </div>
-        </div>
+      v-for="(cfg, key) in statusConfig"
+      :key="key"
+      class="cal-dropdown-item"
+      :style="{ background: cfg.bg, color: cfg.color }"
+      @click.stop="selectStatus(key)"
+      >
+      {{ cfg.label }}
+      </div>
       </div>
     </div>
+    </div>
+
+    <!-- панель для множественного выделения -->
+    <div v-if="false" class="bulk-bar">
+      <span class="bulk-count">Выбрано дней: 5</span>
+      <div class="bulk-actions">
+        <div class="bulk-btn" style="background:#EAF3DE;color:#27500A">Работа</div>
+        <div class="bulk-btn" style="background:#FAEEDA;color:#633806">Удалённая работа</div>
+        <div class="bulk-btn" style="background:#E6F1FB;color:#0C447C">Отпуск</div>
+        <div class="bulk-btn" style="background:#FAECE7;color:#712B13">Больничный</div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <style scoped>
@@ -270,10 +227,10 @@ async function applyBulkStatus(status: string) {
   align-items: flex-start;
   padding: 8px;
   background: #ffffff;
+  transition: filter 0.1s;
 }
 .cal-cell:hover:not(.empty):not(.weekend) {
   filter: brightness(0.95);
-    z-index: 1;
 }
 .cal-cell.empty {
   border: none;
@@ -314,11 +271,9 @@ async function applyBulkStatus(status: string) {
 .cal-dropdown-item {
   padding: 8px 14px;
   font-size: 13px;
-  cursor: pointer;  
+  cursor: pointer;
 }
-.cal-dropdown-item:hover { 
-  filter: brightness(0.95);
-   }
+.cal-dropdown-item:hover { filter: brightness(0.95); }
 .bulk-bar {
   position: fixed;
   bottom: 24px;
