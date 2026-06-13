@@ -37,6 +37,14 @@ const weekends = computed(() => {
   return w
 })
 
+const iconMode = ref<'text' | 'icon'>('text')
+
+const iconConfig = {
+  work:     '•',
+  day_off:  '🏠',
+  vacation: '✈️',
+  sick:     '🌡️',
+}
 
 const statusConfig = {
   work:     { label: 'Р',  bg: '#EAF3DE', color: '#27500A' },
@@ -123,6 +131,43 @@ const filteredDepartments = computed(() => {
   return result
 })
 
+// переключатель темы
+const tableStyle = ref<'compact' | 'spacious'>('compact')
+
+onMounted(() => {
+  const saved = localStorage.getItem(`tableStyle-${authStore.user?.id}`)
+  if (saved) tableStyle.value = saved as 'compact' | 'spacious'
+  
+  const savedIcons = localStorage.getItem(`iconMode-${authStore.user?.id}`)
+  if (savedIcons) iconMode.value = savedIcons as 'text' | 'icon'
+})
+
+watch(tableStyle, (val) => {
+  localStorage.setItem(`tableStyle-${authStore.user?.id}`, val)
+})
+
+watch(iconMode, (val) => {
+  localStorage.setItem(`iconMode-${authStore.user?.id}`, val)
+})
+
+// переключатель для итога
+const summaryMode = ref<'bar' | 'counts'>('bar')
+
+onMounted(() => {
+  const saved = localStorage.getItem(`tableStyle-${authStore.user?.id}`)
+  if (saved) tableStyle.value = saved as 'compact' | 'spacious'
+  
+  const savedIcons = localStorage.getItem(`iconMode-${authStore.user?.id}`)
+  if (savedIcons) iconMode.value = savedIcons as 'text' | 'icon'
+
+  const savedSummary = localStorage.getItem(`summaryMode-${authStore.user?.id}`)
+  if (savedSummary) summaryMode.value = savedSummary as 'bar' | 'counts'
+})
+
+watch(summaryMode, (val) => {
+  localStorage.setItem(`summaryMode-${authStore.user?.id}`, val)
+})
+
 </script>
 
 <template>
@@ -140,14 +185,25 @@ const filteredDepartments = computed(() => {
         </option>
       </select>
     </div>
-    <div class="legend">
-      <span class="legend-item" style="background:#EAF3DE;color:#27500A">Работа</span>
-      <span class="legend-item" style="background:#FAEEDA;color:#633806">Удалённая работа</span>
-      <span class="legend-item" style="background:#E6F1FB;color:#0C447C">Отпуск</span>
-      <span class="legend-item" style="background:#FAECE7;color:#712B13">Больничный</span>
+    <div class="legend-row">
+      <div class="legend">
+        <span class="legend-item" style="background:#EAF3DE;color:#27500A">Работа</span>
+        <span class="legend-item" style="background:#FAEEDA;color:#633806">Удалённая работа</span>
+        <span class="legend-item" style="background:#E6F1FB;color:#0C447C">Отпуск</span>
+        <span class="legend-item" style="background:#FAECE7;color:#712B13">Больничный</span>
+      </div>
+      <button class="icon-toggle" @click="iconMode = iconMode === 'text' ? 'icon' : 'text'">
+        {{ iconMode === 'text' ? '✈️ Иконки' : 'Аб Буквы' }}
+      </button>
+      <button class="icon-toggle" @click="tableStyle = tableStyle === 'compact' ? 'spacious' : 'compact'">
+        {{ tableStyle === 'compact' ? '⊞ Просторный' : '☰ Компактный' }}
+      </button>
+      <button class="icon-toggle" @click="summaryMode = summaryMode === 'bar' ? 'counts' : 'bar'">
+        {{ summaryMode === 'bar' ? '123 Счётчики' : '▬ График' }}
+      </button>
     </div>
 
-    <div class="table-wrap">
+    <div class="table-wrap" :class="tableStyle">
       <table>
         <thead>
           <tr>
@@ -170,37 +226,55 @@ const filteredDepartments = computed(() => {
             </tr>
             <tr v-for="emp in emps" :key="emp.id">
               <td class="name-cell">{{ emp.name }}</td>
-                <td
-                  v-for="day in days"
-                  :key="day"
-                  :class="{ weekend: weekends.includes(day) }"
-                  :style="!weekends.includes(day) ? {
-                    background: getStatusConfig(emp.id, getDateString(day)).bg,
-                    color: getStatusConfig(emp.id, getDateString(day)).color
-                  } : {}"
-                  class="status-cell"
-                  style="position: relative"
-                  @click.stop="!weekends.includes(day) && openDropdown(emp.id, day)"
-                >
-                  {{ weekends.includes(day) ? '' : getStatusConfig(emp.id, getDateString(day)).label }}
-
-                  <div
-                    v-if="activeCell?.empId === emp.id && activeCell?.date === getDateString(day)"
-                    class="dropdown"
-                  >
+              <td
+                v-for="day in days"
+                :key="day"
+                :class="{ weekend: weekends.includes(day) }"
+                :style="!weekends.includes(day) ? {
+                  background: tableStyle === 'spacious' ? '' : getStatusConfig(emp.id, getDateString(day)).bg,
+                  color: getStatusConfig(emp.id, getDateString(day)).color
+                } : {}"
+                class="status-cell"
+                style="position: relative"
+                @click.stop="!weekends.includes(day) && openDropdown(emp.id, day)"
+              >
+                <template v-if="!weekends.includes(day)">
+                  <template v-if="tableStyle === 'compact'">
+                    {{ iconMode === 'text'
+                      ? getStatusConfig(emp.id, getDateString(day)).label
+                      : iconConfig[store.getStatus(emp.id, getDateString(day)) as StatusKey] }}
+                  </template>
+                  <template v-else>
                     <div
-                      v-for="(cfg, key) in statusConfig"
-                      :key="key"
-                      class="dropdown-item"
-                      :style="{ background: cfg.bg, color: cfg.color }"
-                      @click.stop="selectStatus(key)"
+                      v-if="store.getStatus(emp.id, getDateString(day)) !== 'work'"
+                      class="spacious-block"
+                      :style="{ background: getStatusConfig(emp.id, getDateString(day)).bg, color: getStatusConfig(emp.id, getDateString(day)).color }"
                     >
-                      {{ cfg.label }} —
-                      {{ key === 'work' ? 'Работа' : key === 'vacation' ? 'Отпуск' : key === 'sick' ? 'Больничный' : 'Удаленка' }}
+                      {{ iconMode === 'text'
+                        ? getStatusConfig(emp.id, getDateString(day)).label
+                        : iconConfig[store.getStatus(emp.id, getDateString(day)) as StatusKey] }}
                     </div>
+                  </template>
+                </template>
+
+                <div
+                  v-if="activeCell?.empId === emp.id && activeCell?.date === getDateString(day)"
+                  class="dropdown"
+                >
+                  <div
+                    v-for="(cfg, key) in statusConfig"
+                    :key="key"
+                    class="dropdown-item"
+                    :style="{ background: cfg.bg, color: cfg.color }"
+                    @click.stop="selectStatus(key)"
+                  >
+                    {{ cfg.label }} —
+                    {{ key === 'work' ? 'Работа' : key === 'vacation' ? 'Отпуск' : key === 'sick' ? 'Больничный' : 'Удаленка' }}
                   </div>
-                </td>
-                <td class="sum-cell">
+                </div>
+              </td>
+              <td class="sum-cell">
+                <template v-if="summaryMode === 'bar'">
                   <div class="progress-bar">
                     <div
                       v-for="(cfg, key) in statusConfig"
@@ -212,7 +286,24 @@ const filteredDepartments = computed(() => {
                       :title="key + ': ' + getCount(emp.id, key) + ' дн.'"
                     ></div>
                   </div>
-                </td>
+                </template>
+                <template v-else>
+                  <div class="counts">
+                    <span class="count-item vacation" :title="'Отпуск'">
+                      ✈️ {{ getCount(emp.id, 'vacation') }}
+                    </span>
+                    <span class="count-item sick" :title="'Больничный'">
+                      🌡️ {{ getCount(emp.id, 'sick') }}
+                    </span>
+                    <span class="count-item dayoff" :title="'Удалёнка'">
+                      🏠 {{ getCount(emp.id, 'day_off') }}
+                    </span>
+                    <span class="count-item work" :title="'Удалёнка'">
+                      💼 {{ days_month - (getCount(emp.id, 'vacation') +  getCount(emp.id, 'sick') +  getCount(emp.id, 'day_off'))}}
+                    </span>
+                  </div>
+                </template>
+              </td>
             </tr>
           </template>
         </tbody>
@@ -314,6 +405,38 @@ td.sum-cell {
   height: 100%;
 }
 
+.counts {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.count-item {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.count-item.vacation {
+  background: #E6F1FB;
+  color: #0C447C;
+}
+.count-item.sick {
+  background: #FAECE7;
+  color: #712B13;
+}
+.count-item.dayoff {
+  background: #FAEEDA;
+  color: #633806;
+}
+
+.count-item.work {
+  background: #EAF3DE;
+  color: #633806;
+}
+
+
 
 .dropdown {
   position: absolute;
@@ -361,5 +484,142 @@ td.sum-cell {
   border-radius: 8px;
   background: #ffffff;
   outline: none;
+}
+
+/*  кнопка переключатель */
+.legend-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin-bottom: 12px;
+  gap: 22px;
+  align-items: flex-start;
+
+}
+.icon-toggle {
+  font-size: 12px;
+  padding: 4px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #ffffff;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.icon-toggle:hover {
+  background: #f3f4f6;
+}
+
+/* переключение темы */
+
+.table-wrap.spacious table {
+  width: max-content;
+  min-width: 100%;
+  border: 1px solid #d1d5db;
+}
+
+.table-wrap.spacious th {
+  padding: 10px 16px;
+  font-size: 13px;
+  min-width: 80px;
+  background: #f9fafb;
+  border: 1px solid #d1d5db;
+}
+
+.table-wrap.spacious th.name-col {
+  min-width: 180px;
+}
+
+
+.table-wrap.spacious th.weekend {
+  color: #9ca3af;
+  background: #f3f4f6;
+}
+
+.table-wrap.spacious td {
+  height: 48px;
+  border: 1px solid #d1d5db;
+  padding: 4px 8px;
+}
+
+.table-wrap.spacious td.name-cell {
+  font-size: 14px;
+  font-weight: 500;
+  min-width: 180px;
+  padding: 0 16px;
+  background: #ffffff;
+  border-right: 2px solid #9ca3af;
+}
+
+.table-wrap.spacious td.weekend {
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+}
+
+.table-wrap.spacious td.dept-row {
+  background: #f3f4f6;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid #d1d5db;
+  padding: 6px 16px;
+  color: #4b5563;
+}
+
+.table-wrap.spacious td.sum-cell {
+  background: #f9fafb;
+  border-left: 2px solid #9ca3af;
+}
+
+.table-wrap.spacious td.status-cell {
+  background: transparent;
+  border: 1px solid #d1d5db;
+}
+
+.spacious-block {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  width: 100%;
+  height: 32px;
+}
+
+.table-wrap.spacious td.status-cell {
+  background: transparent;
+  border-right: 1px solid #f3f4f6;
+}
+
+.table-wrap.spacious tr:hover td {
+  background: #fafafa;
+}
+
+.table-wrap.spacious th {
+  padding: 10px 16px;
+  font-size: 13px;
+  min-width: 80px;
+  border: none;
+  border-bottom: 2px solid #e5e7eb;
+  border-right: 1px solid #f3f4f6;
+  background: #ffffff;
+}
+
+.table-wrap.spacious td.name-cell {
+  font-size: 14px;
+  font-weight: 500;
+  min-width: 180px;
+  padding: 0 16px;
+  border-right: 2px solid #e5e7eb;
+}
+
+.table-wrap.spacious td.sum-cell {
+  background: transparent;
+  border-left: 2px solid #e5e7eb;
+}
+
+.table-wrap.spacious td.weekend {
+  background: #fafafa;
+  border-right: 1px solid #f0f0f0;
 }
 </style>

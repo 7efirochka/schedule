@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { productionCalendar } from '~/data/productionCalendar'
+
 const store = useScheduleStore()
 const authStore = useAuthStore()
 
@@ -35,6 +37,13 @@ function selectMonth(monthValue: number) {
   showPicker.value = false
 }
 
+const showCalendar = ref(false)
+const calendarYear = computed(() => Number(store.currentMonth.split('-')[0]))
+
+const calendarData = computed(() => productionCalendar[calendarYear.value])
+
+const monthNames = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь']
+
 function logout() {
   authStore.logout()
   navigateTo('/login')
@@ -49,6 +58,42 @@ function logout() {
         <nav class="topbar-nav">
           <NuxtLink to="/" class="nav-tab">Общий табель</NuxtLink>
           <NuxtLink to="/employees" class="nav-tab">Личный график</NuxtLink>
+          <!-- Для производственного календаря -->
+          <div
+            class="nav-tab cal-trigger"
+            @mouseenter="showCalendar = true"
+            @mouseleave="showCalendar = false"
+          >
+            📅 Производственный календарь
+
+            <div v-if="showCalendar" class="prod-calendar" @mouseenter="showCalendar = true">
+              <table class="prod-table">
+                <thead>
+                  <tr>
+                    <th class="prod-label">Показатель</th>
+                    <th v-for="(m, i) in monthNames" :key="i" class="prod-month">{{ m }}</th>
+                  </tr>
+                </thead>
+                <tbody v-if="calendarData">
+                  <tr>
+                    <td class="prod-label">Календарных дней</td>
+                    <td v-for="(d, i) in calendarData.calendar" :key="i">{{ d }}</td>
+                  </tr>
+                  <tr>
+                    <td class="prod-label">Рабочих дней</td>
+                    <td v-for="(d, i) in calendarData.working" :key="i" class="working">{{ d }}</td>
+                  </tr>
+                  <tr>
+                    <td class="prod-label">Предпраздничных дней</td>
+                    <td v-for="(d, i) in calendarData.preholiday" :key="i" :class="{ highlight: d > 0 }">{{ d }}</td>
+                  </tr>
+                </tbody>
+                <tbody v-else>
+                  <tr><td colspan="13" class="no-data">Нет данных за {{ calendarYear }}</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </nav>
         <div class="topbar-right">
           <div class="month-picker-wrap">
@@ -125,7 +170,10 @@ function logout() {
   padding: 20px 24px;
   background: #ffffff;
   min-height: calc(100vh - 52px);
+  overflow-y: auto;
+  height: calc(100vh - 52px);
 }
+
 .nav-tab {
   display: flex;
   align-items: center;
@@ -230,4 +278,54 @@ function logout() {
   cursor: pointer;
 }
 .btn-logout:hover { background: #f3f4f6; }
+
+/* для производственного календаря */
+.cal-trigger {
+  position: relative;
+  cursor: default;
+}
+.prod-calendar {
+  position: absolute;
+  top: 52px;
+  left: 0;
+  z-index: 500;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  padding: 12px;
+  white-space: nowrap;
+}
+.prod-table {
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.prod-table th,
+.prod-table td {
+  border: 1px solid #e5e7eb;
+  padding: 5px 10px;
+  text-align: center;
+}
+.prod-table th {
+  background: #f3f4f6;
+  font-weight: 500;
+}
+th.prod-label,
+td.prod-label {
+  text-align: left;
+  min-width: 160px;
+  background: #f3f4f6;
+}
+td.working {
+  color: #27500A;
+  background: #EAF3DE;
+}
+td.highlight {
+  color: #993C1D;
+  font-weight: 500;
+}
+.no-data {
+  color: #9ca3af;
+  padding: 12px;
+}
 </style>

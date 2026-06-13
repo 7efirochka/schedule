@@ -1,7 +1,24 @@
 <script setup lang="ts">
-// definePageMeta({
-//   middleware: 'auth'
-// })
+
+import { productionCalendar } from '~/data/productionCalendar'
+
+function getCalendarDays(month: number) {
+  return productionCalendar[selectedYear.value]?.calendar[month - 1] ?? '—'
+}
+
+function getWorkingDays(month: number) {
+  return productionCalendar[selectedYear.value]?.working[month - 1] ?? '—'
+}
+
+function getPreHolidays(month: number) {
+  return productionCalendar[selectedYear.value]?.preholiday[month - 1] ?? '—'
+}
+
+function getWorkingHours(month: number) {
+  const days = productionCalendar[selectedYear.value]?.working[month - 1] ?? 0
+  const pre = productionCalendar[selectedYear.value]?.preholiday[month - 1] ?? 0
+  return days * 8 - pre
+}
 
 const selectedYear = ref(new Date().getFullYear())
 const searchQuery = ref('')
@@ -75,13 +92,13 @@ watch(selectedYear, () => refresh())
       <table>
         <thead>
           <tr>
-            <th class="col-name" rowspan="2">Ф.И.О.</th>
-            <th class="col-dept" rowspan="2">Отдел</th>
-            <th class="col-num" rowspan="2">С пр. года</th>
-            <th class="col-num" rowspan="2">Остаток</th>
-            <th class="col-num" rowspan="2">Исп.</th>
-            <th class="col-num" rowspan="2">Б</th>
-            <th class="col-num" rowspan="2">Уд</th>
+            <th class="col-name" rowspan="3">Ф.И.О.</th>
+            <th class="col-dept" rowspan="3">Отдел</th>
+            <th class="col-num" rowspan="3">С пр. года</th>
+            <th class="col-num" rowspan="3">Остаток</th>
+            <th class="col-num" rowspan="3">Исп.</th>
+            <th class="col-num" rowspan="3">Б</th>
+            <th class="col-num" rowspan="3">Уд</th>
             <th
               v-for="m in months"
               :key="m.value"
@@ -90,6 +107,20 @@ watch(selectedYear, () => refresh())
             >
               {{ m.label }}
             </th>
+          </tr>
+          <tr>
+            <template v-for="m in months" :key="m.value">
+              <td colspan="3" class="prod-info-cell">
+                <div class="prod-info-row">
+                  <span class="prod-info-item">📅 {{ getCalendarDays(m.value) }} кал.</span>
+                  <span class="prod-info-item working">💼 {{ getWorkingDays(m.value) }} раб.</span>
+                </div>
+                <div class="prod-info-row">
+                  <span class="prod-info-item preholiday">🎉 {{ getPreHolidays(m.value) }} пред.</span>
+                  <span class="prod-info-item hours">⏱ {{ getWorkingHours(m.value) }} ч.</span>
+                </div>
+              </td>
+            </template>
           </tr>
           <tr>
             <template v-for="m in months" :key="m.value">
@@ -140,9 +171,11 @@ watch(selectedYear, () => refresh())
 </template>
 
 <style scoped>
+
 .summary-page {
   padding: 20px 24px;
 }
+
 .summary-filters {
   display: flex;
   gap: 10px;
@@ -150,6 +183,7 @@ watch(selectedYear, () => refresh())
   flex-wrap: wrap;
   align-items: center;
 }
+
 .search-input {
   font-size: 13px;
   padding: 6px 12px;
@@ -158,9 +192,9 @@ watch(selectedYear, () => refresh())
   width: 200px;
   outline: none;
 }
-.search-input:focus {
-  border-color: #9ca3af;
-}
+
+.search-input:focus { border-color: #9ca3af; }
+
 .filter-select {
   font-size: 13px;
   padding: 6px 12px;
@@ -169,81 +203,92 @@ watch(selectedYear, () => refresh())
   background: #ffffff;
   outline: none;
 }
-.year-btns {
-  display: flex;
-  gap: 6px;
-}
-.year-btn {
-  padding: 5px 14px;
-  font-size: 13px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #ffffff;
-  cursor: pointer;
-}
-.year-btn.active {
-  background: #1a1a1a;
-  color: #ffffff;
-  border-color: #1a1a1a;
-}
+
 .table-wrap {
   overflow-x: auto;
+  overflow-y: auto;
+  max-height: calc(100vh - 160px);
 }
+
 table {
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: 13px;
   white-space: nowrap;
 }
+
+thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
 th {
   background: #f3f4f6;
-  padding: 5px 6px;
+  padding: 7px 10px;
   text-align: center;
   border: 1px solid #e5e7eb;
   font-weight: 500;
-  font-size: 11px;
+  font-size: 12px;
 }
+
 th.col-name {
+  position: sticky;
+  left: 0;
+  z-index: 30;
+  background: #f3f4f6;
   text-align: left;
-  min-width: 120px;
-  padding-left: 10px;
+  min-width: 150px;
+  padding-left: 12px;
 }
-th.col-dept {
-  text-align: left;
-  min-width: 140px;
-  padding-left: 10px;
-}
-th.col-num { min-width: 40px; }
-th.col-month { min-width: 60px; }
-th.col-sub { min-width: 24px; font-weight: 400; }
-th.vacation { color: #0C447C; }
-th.sick { color: #712B13; }
-th.dayoff { color: #633806; }
+
+th.col-dept { text-align: left; min-width: 160px; padding-left: 12px; }
+th.col-num { min-width: 55px; }
+th.col-month { min-width: 80px; }
+th.col-sub { min-width: 30px; font-weight: 400; }
+
+th.vacation { background: #E6F1FB; color: #0C447C; }
+th.sick     { background: #FAECE7; color: #712B13; }
+th.dayoff   { background: #FAEEDA; color: #633806; }
+
 td {
   border: 1px solid #e5e7eb;
   text-align: center;
-  padding: 4px 6px;
-  height: 26px;
-  font-size: 11px;
+  padding: 6px 8px;
+  height: 36px;
+  font-size: 13px;
 }
+
 td.col-name {
-  text-align: left;
-  padding-left: 10px;
+  position: sticky;
+  left: 0;
+  z-index: 5;
   background: #ffffff;
-}
-td.col-dept {
   text-align: left;
-  padding-left: 10px;
-  color: #6b7280;
+  padding-left: 12px;
+  font-size: 13px;
+  box-shadow: 2px 0 4px rgba(0,0,0,0.06);
 }
-td.col-sub.vacation { color: #0C447C; }
-td.col-sub.sick { color: #712B13; }
-td.col-sub.dayoff { color: #633806; }
-td.negative { color: #dc2626; font-weight: 500; }
-td.sick-total { color: #712B13; }
-td.dayoff-total { color: #633806; }
-.no-results {
+
+td.col-dept { text-align: left; padding-left: 12px; color: #6b7280; }
+td.col-sub.vacation { background: #F0F7FF; color: #0C447C; }
+td.col-sub.sick     { background: #FFF4F0; color: #712B13; }
+td.col-sub.dayoff   { background: #FFFAF0; color: #633806; }
+td.negative         { color: #dc2626; font-weight: 500; }
+td.sick-total       { background: #FFF4F0; color: #712B13; font-weight: 500; }
+td.dayoff-total     { background: #FFFAF0; color: #633806; font-weight: 500; }
+
+.no-results { text-align: center; color: #9ca3af; padding: 20px; }
+
+.prod-info-cell {
+  background: #f9fafb;
+  padding: 4px 6px;
+  border: 1px solid #e5e7eb;
   text-align: center;
-  color: #9ca3af;
-  padding: 20px;
 }
+
+.prod-info-row { display: flex; justify-content: center; gap: 8px; white-space: nowrap; }
+.prod-info-item { font-size: 11px; color: #6b7280; }
+.prod-info-item.working   { color: #27500A; }
+.prod-info-item.preholiday { color: #993C1D; }
+.prod-info-item.hours     { color: #185FA5; }
 </style>
