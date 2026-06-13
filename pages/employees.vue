@@ -65,14 +65,36 @@ function isWeekend(day: number) {
 }
 
 const activeDropdown = ref<number | null>(null)
+const rangeStart = ref<number | null>(null)
 
 function onClick(day: number) {
   if (isWeekend(day)) return
-  if (activeDropdown.value === day) {
+
+  if (rangeStart.value === null) {
+    rangeStart.value = day
+    selectedDays.value = new Set([day])
     activeDropdown.value = null
-  } else {
+  } else if (rangeStart.value === day) {
+    rangeStart.value = null
+    selectedDays.value = new Set()
     activeDropdown.value = day
+  } else {
+    const start = Math.min(rangeStart.value, day)
+    const end = Math.max(rangeStart.value, day)
+    const newSet = new Set<number>()
+    for (let d = start; d <= end; d++) {
+      if (!isWeekend(d)) newSet.add(d)
+    }
+    selectedDays.value = newSet
+    rangeStart.value = null
+    activeDropdown.value = null
   }
+}
+
+function closeDropdown() {
+  activeDropdown.value = null
+  rangeStart.value = null
+  selectedDays.value = new Set()
 }
 
 async function selectStatus(status: string) {
@@ -81,8 +103,12 @@ async function selectStatus(status: string) {
   activeDropdown.value = null
 }
 
-function closeDropdown() {
-  activeDropdown.value = null
+async function applyBulkStatus(status: string) {
+  for (const day of selectedDays.value) {
+    await store.updateStatus(authStore.user.id, getDateString(day), status)
+  }
+  await store.fetchSchedule()
+  selectedDays.value = new Set()
 }
 
 function prevMonth() {
@@ -153,14 +179,19 @@ function nextMonth() {
     </div>
     </div>
 
-    <!-- панель для множественного выделения -->
-    <div v-if="false" class="bulk-bar">
-      <span class="bulk-count">Выбрано дней: 5</span>
+        <!-- панель для множественного выделения -->
+    <div v-if="selectedDays.size > 1" class="bulk-bar" @click.stop>
+      <span class="bulk-count">Выбрано дней: {{ selectedDays.size }}</span>
       <div class="bulk-actions">
-        <div class="bulk-btn" style="background:#EAF3DE;color:#27500A">Работа</div>
-        <div class="bulk-btn" style="background:#FAEEDA;color:#633806">Удалённая работа</div>
-        <div class="bulk-btn" style="background:#E6F1FB;color:#0C447C">Отпуск</div>
-        <div class="bulk-btn" style="background:#FAECE7;color:#712B13">Больничный</div>
+        <div
+          v-for="(cfg, key) in statusConfig"
+          :key="key"
+          class="bulk-btn"
+          :style="{ background: cfg.bg, color: cfg.color }"
+          @click="applyBulkStatus(key)"
+        >
+          {{ cfg.label }}
+        </div>
       </div>
     </div>
   </div>
@@ -177,16 +208,26 @@ function nextMonth() {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 24px;
+  gap: 70px;
   margin-bottom: 20px;
 }
 .arrow-btn {
+  
   font-size: 28px;
   background: none;
   border: none;
   cursor: pointer;
   color: #1a1a1a;
   padding: 0 8px;
+  position: absolute;
+}
+
+.arrow-btn:first-child {
+  left: calc(50% - 190px);
+}
+
+.arrow-btn:last-child {
+  right: calc(50% - 190px);
 }
 .arrow-btn:hover { color: #6b7280; }
 .cal-title {

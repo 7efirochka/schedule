@@ -107,10 +107,39 @@ async function selectStatus(status: string) {
 function closeDropdown() {
   activeCell.value = null
 }
+
+const searchQuery = ref('')
+const filterDept = ref('')
+
+const filteredDepartments = computed(() => {
+  const result = new Map()
+  for (const [deptName, emps] of departments.value) {
+    if (filterDept.value && deptName !== filterDept.value) continue
+    const filtered = emps.filter((emp: any) =>
+      emp.name.toLowerCase().includes(searchQuery.value.toLowerCase())
+    )
+    if (filtered.length > 0) result.set(deptName, filtered)
+  }
+  return result
+})
+
 </script>
 
 <template>
   <div @click="closeDropdown">
+      <div class="filters">
+      <input
+        v-model="searchQuery"
+        class="search-input"
+        placeholder="Поиск по ФИО..."
+      />
+      <select v-model="filterDept" class="filter-select">
+        <option value="">Все отделы</option>
+        <option v-for="[deptName] in departments" :key="deptName" :value="deptName">
+          {{ deptName }}
+        </option>
+      </select>
+    </div>
     <div class="legend">
       <span class="legend-item" style="background:#EAF3DE;color:#27500A">Работа</span>
       <span class="legend-item" style="background:#FAEEDA;color:#633806">Удалённая работа</span>
@@ -135,7 +164,7 @@ function closeDropdown() {
           </tr>
         </thead>
         <tbody>
-          <template v-for="[deptName, emps] in departments" :key="deptName">
+          <template v-for="[deptName, emps] in filteredDepartments" :key="deptName">
             <tr>
               <td :colspan="days.length + 2" class="dept-row">{{ deptName }}</td>
             </tr>
@@ -305,5 +334,32 @@ td.sum-cell {
 }
 .dropdown-item:hover {
   filter: brightness(0.95);
+}
+
+
+.filters {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.search-input {
+  font-size: 13px;
+  padding: 6px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  width: 200px;
+  outline: none;
+}
+.search-input:focus {
+  border-color: #9ca3af;
+}
+.filter-select {
+  font-size: 13px;
+  padding: 6px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
+  outline: none;
 }
 </style>
