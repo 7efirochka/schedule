@@ -7,6 +7,25 @@ definePageMeta({
 const store = useScheduleStore()
 const authStore = useAuthStore()
 
+const searchQuery = ref('')
+const showSearch = ref(false)
+
+const currentEmployee = computed(() =>
+  store.employees.find((e: any) => e.id === empId)
+)
+
+const filteredEmployees = computed(() => {
+  if (!searchQuery.value) return store.employees
+  return store.employees.filter((e: any) =>
+    e.name.toLowerCase().includes(searchQuery.value.toLowerCase())
+  )
+})
+
+onMounted(async () => {
+  await store.fetchEmployees()
+  await store.fetchSchedule()
+})
+
 const route = useRoute()
 const empId = Number(route.params.id)
 
@@ -136,11 +155,32 @@ function nextMonth() {
 <template>
   <div @click="closeDropdown" class="calendar-page">
     <div class="cal-owner">
-  <span class="cal-owner-name">{{ authStore.user?.name }}</span>
-  <span class="cal-owner-dept">{{ authStore.user?.department }}</span>
-    </div>
+      <div class="cal-owner-left">
+        <span class="cal-owner-name">{{ currentEmployee?.name }}</span>
+        <span class="cal-owner-dept">{{ currentEmployee?.department }}</span>
+      </div>
+
+        <div v-if="isAdmin" class="emp-search-wrap" @click.stop>
+          <input
+            v-model="searchQuery"
+            class="emp-search"
+            placeholder="Сменить сотрудника..."
+            @focus="showSearch = true"
+          />
+          <div v-if="showSearch && searchQuery" class="emp-search-list">
+            <div
+              v-for="emp in filteredEmployees"
+              :key="emp.id"
+              class="emp-search-item"
+              @click="navigateTo(`/calendar/${emp.id}`); showSearch = false; searchQuery = ''"
+            >
+              <span class="emp-search-name">{{ emp.name }}</span>
+              <span class="emp-search-dept">{{ emp.department }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
     <div class="cal-header">
-      <!-- <h2 class = "user-name"> {{ authStore.user?.name }} </h2> -->
       <button @click.stop="prevMonth" class="arrow-btn">‹</button>
       <div class="cal-title">
         <span class="cal-month">{{  monthName }}</span>
@@ -215,19 +255,83 @@ function nextMonth() {
   padding: 24px;
   user-select: none;
 }
-
 .cal-owner {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
   margin-bottom: 16px;
+  gap: 24px;
 }
+
+.cal-owner-left {
+  display: flex;
+  flex-direction: column;
+}
+
 .cal-owner-name {
   font-size: 22px;
   font-weight: 600;
   color: #1a1a1a;
 }
+
 .cal-owner-dept {
-  font-size: 17px;
+  font-size: 14px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.emp-search-wrap {
+  position: relative;
+  width: 220px;
+}
+
+.emp-search {
+  width: 100%;
+  font-size: 13px;
+  padding: 6px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  outline: none;
+}
+
+.emp-search:focus {
+  border-color: #9ca3af;
+}
+
+.emp-search-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  z-index: 100;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.emp-search-item {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.emp-search-item:hover {
+  background: #f3f4f6;
+}
+
+.emp-search-name {
+  font-weight: 500;
+  color: #1a1a1a;
+}
+
+.emp-search-dept {
+  font-size: 11px;
   color: #6b7280;
 }
 

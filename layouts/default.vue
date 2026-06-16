@@ -60,6 +60,7 @@ function logout() {
           <NuxtLink :to="`/calendar/${authStore.user?.id}`" class="nav-tab">Личный график</NuxtLink>
           <NuxtLink to="/summary" class="nav-tab">Итоговая таблица</NuxtLink>
           <!-- Для производственного календаря -->
+          <div class="nav-spacer"></div>
           <div
             class="nav-tab cal-trigger"
             @mouseenter="showCalendar = true"
@@ -94,7 +95,7 @@ function logout() {
                 </tbody>
               </table>
             </div>
-          </div>
+            </div>
         </nav>
         <div class="topbar-right">
           <div class="month-picker-wrap">
@@ -164,7 +165,14 @@ function logout() {
 .topbar-nav {
   display: flex;
   height: 52px;
-  gap: 4px;
+  gap: 7px;
+  /* align-items: center;
+  justify-content: space-between; */
+  flex: 1;
+}
+
+.nav-spacer {
+  flex: 1;
 }
 
 .page-content {
@@ -190,7 +198,6 @@ function logout() {
   border-bottom-color: #1a1a1a;
 }
 .topbar-right {
-  margin-left: auto;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -286,7 +293,8 @@ function logout() {
 .prod-calendar {
   position: absolute;
   top: 52px;
-  left: 0;
+  right: 0;
+  left: auto;
   z-index: 500;
   background: #ffffff;
   border: 1px solid #e5e7eb;

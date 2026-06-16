@@ -94,9 +94,9 @@ watch(selectedYear, () => refresh())
           <tr>
             <th class="col-name" rowspan="3">Ф.И.О.</th>
             <th class="col-dept" rowspan="3">Отдел</th>
-            <th class="col-num" rowspan="3">С пр. года</th>
-            <th class="col-num" rowspan="3">Остаток</th>
-            <th class="col-num" rowspan="3">Исп.</th>
+            <th class="col-num col-carried" rowspan="3">С пр. года</th>
+            <th class="col-num col-remaining" rowspan="3">Остаток</th>
+            <th class="col-num col-used" rowspan="3">Исп.</th>
             <th class="col-num" rowspan="3">Б</th>
             <th class="col-num" rowspan="3">Уд</th>
             <th
@@ -135,11 +135,11 @@ watch(selectedYear, () => refresh())
             <tr v-for="emp in filtered" :key="emp.id">
               <td class="col-name">{{ emp.name }}</td>
               <td class="col-dept">{{ emp.department }}</td>
-              <td class="col-num">{{ emp.days_carried_over }}</td>
-              <td class="col-num" :class="{ negative: emp.days_remaining < 0 }">
+              <td class="col-num col-carried">{{ emp.days_carried_over }}</td>
+              <td class="col-num col-remaining" :class="{ negative: emp.days_remaining < 0 }">
                 {{ emp.days_remaining }}
               </td>
-              <td class="col-num">{{ emp.days_used }}</td>
+              <td class="col-num col-used">{{ emp.days_used }}</td>
               <td class="col-num sick-total">
                 {{ Object.values(emp.months).reduce((s: any, m: any) => s + Number(m.sick), 0) }}
               </td>
@@ -245,6 +245,14 @@ th.col-dept { text-align: left; min-width: 160px; padding-left: 12px; }
 th.col-num { min-width: 55px; }
 th.col-month { min-width: 80px; }
 th.col-sub { min-width: 30px; font-weight: 400; }
+
+td.col-carried { background: #F5F0FF; color: #3B1F6B; }
+td.col-remaining { background: #F1F8F1; color: #1B5E20; }
+td.col-used { background: #FAF5FF; color: #5B21B6; }
+
+/* th.col-carried { background: #EDE8FF; color: #3B1F6B; }
+th.col-remaining { background: #E8F5E9; color: #1B5E20; }
+th.col-used { background: #F3E8FF; color: #5B21B6; } */
 
 th.vacation { background: #E6F1FB; color: #0C447C; }
 th.sick     { background: #FAECE7; color: #712B13; }
