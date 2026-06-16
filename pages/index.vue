@@ -1,6 +1,9 @@
 <script setup lang="ts">
+
 const store = useScheduleStore()
 const authStore = useAuthStore()
+
+const isAdmin = computed(() => authStore.user?.role === 'admin')
 
 const days_week = ["вс","пн","вт","ср","чт","пт","сб"]
 
@@ -96,7 +99,8 @@ function getStatusConfig(empId: number, date: string) {
 const activeCell = ref<{empId: number, date: string} | null>(null)
 
 function openDropdown(empId: number, day: number) {
-  if (authStore.user?.id !== empId) return
+  if (!authStore.user) return
+  if (!isAdmin.value) return
 
   const date = getDateString(day)
   if (activeCell.value?.empId === empId && activeCell.value?.date === date) {
@@ -131,7 +135,7 @@ const filteredDepartments = computed(() => {
   return result
 })
 
-// переключатель темы
+// переключатель темы (компактный или просторный)
 const tableStyle = ref<'compact' | 'spacious'>('compact')
 
 onMounted(() => {
@@ -150,7 +154,7 @@ watch(iconMode, (val) => {
   localStorage.setItem(`iconMode-${authStore.user?.id}`, val)
 })
 
-// переключатель для итога
+// переключатель для колонки итога (прогресс или статистика)
 const summaryMode = ref<'bar' | 'counts'>('bar')
 
 onMounted(() => {
@@ -225,15 +229,25 @@ watch(summaryMode, (val) => {
               <td :colspan="days.length + 2" class="dept-row">{{ deptName }}</td>
             </tr>
             <tr v-for="emp in emps" :key="emp.id">
-              <td class="name-cell">{{ emp.name }}</td>
+              <td class="name-cell">
+              <NuxtLink 
+              v-if="isAdmin"
+              :to="`/calendar/${emp.id}`" class="emp-link">
+                {{ emp.name }}
+              </NuxtLink>
+              <span v-else>{{ emp.name }}</span>
+            </td>
               <td
                 v-for="day in days"
                 :key="day"
                 :class="{ weekend: weekends.includes(day) }"
                 :style="!weekends.includes(day) ? {
                   background: tableStyle === 'spacious' ? '' : getStatusConfig(emp.id, getDateString(day)).bg,
-                  color: getStatusConfig(emp.id, getDateString(day)).color
-                } : {}"
+                  color: getStatusConfig(emp.id, getDateString(day)).color,
+                  cursor: isAdmin.value ? 'pointer' : 'default'
+                } : {
+                  cursor:'default'
+                }"
                 class="status-cell"
                 style="position: relative"
                 @click.stop="!weekends.includes(day) && openDropdown(emp.id, day)"

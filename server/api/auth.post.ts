@@ -5,7 +5,7 @@ export default defineEventHandler(async (event) => {
   const { email } = body
 
   const [rows]: any = await db.query(`
-    SELECT e.id, e.name, e.email, d.name as department
+    SELECT e.id, e.name, e.email, e.role, d.name as department
     FROM employee e
     LEFT JOIN departments d ON e.dep_id = d.id
     WHERE e.email = ?

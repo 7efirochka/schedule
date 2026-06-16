@@ -57,7 +57,8 @@ function logout() {
         <div class="topbar-brand">📅 Табель</div>
         <nav class="topbar-nav">
           <NuxtLink to="/" class="nav-tab">Общий табель</NuxtLink>
-          <NuxtLink to="/employees" class="nav-tab">Личный график</NuxtLink>
+          <NuxtLink :to="`/calendar/${authStore.user?.id}`" class="nav-tab">Личный график</NuxtLink>
+          <NuxtLink to="/summary" class="nav-tab">Итоговая таблица</NuxtLink>
           <!-- Для производственного календаря -->
           <div
             class="nav-tab cal-trigger"
@@ -170,8 +171,6 @@ function logout() {
   padding: 20px 24px;
   background: #ffffff;
   min-height: calc(100vh - 52px);
-  overflow-y: auto;
-  height: calc(100vh - 52px);
 }
 
 .nav-tab {
