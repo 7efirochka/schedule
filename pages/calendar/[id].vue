@@ -11,7 +11,7 @@ const searchQuery = ref('')
 const showSearch = ref(false)
 
 const currentEmployee = computed(() =>
-  store.employees.find((e: any) => e.id === empId)
+  store.employees.find((e: any) =>  String(e._id) === String(empId))
 )
 
 const filteredEmployees = computed(() => {
@@ -27,7 +27,7 @@ onMounted(async () => {
 })
 
 const route = useRoute()
-const empId = Number(route.params.id)
+const empId = route.params.id as string 
 
 const isAdmin = computed(() => authStore.user?.role === 'admin')
 
@@ -156,7 +156,7 @@ function nextMonth() {
   <div @click="closeDropdown" class="calendar-page">
     <div class="cal-owner">
       <div class="cal-owner-left">
-        <span class="cal-owner-name">{{ currentEmployee?.name }}</span>
+        <span class="cal-owner-name">{{ currentEmployee?.email }}</span>
         <span class="cal-owner-dept">{{ currentEmployee?.department }}</span>
       </div>
 
@@ -170,11 +170,11 @@ function nextMonth() {
           <div v-if="showSearch && searchQuery" class="emp-search-list">
             <div
               v-for="emp in filteredEmployees"
-              :key="emp.id"
+              :key="emp._id"
               class="emp-search-item"
-              @click="navigateTo(`/calendar/${emp.id}`); showSearch = false; searchQuery = ''"
+              @click="navigateTo(`/calendar/${emp._id}`); showSearch = false; searchQuery = ''"
             >
-              <span class="emp-search-name">{{ emp.name }}</span>
+              <span class="emp-search-name">{{ emp.email }}</span>
               <span class="emp-search-dept">{{ emp.department }}</span>
             </div>
           </div>

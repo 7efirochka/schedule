@@ -77,28 +77,29 @@ function getDateString(day: number) {
   return `${store.currentMonth}-${String(day).padStart(2, '0')}`
 }
 
-function getCount(empId: number, status: string) {
+function getCount(empId: string, status: string) {
   return days.value.filter(d => {
     if (weekends.value.includes(d)) return false
     return store.getStatus(empId, getDateString(d)) === status
   }).length
 }
 
-function getPercent(empId: number, status: string) {
+function getPercent(empId: string, status: string) {
   const workingDays = days.value.filter(d => !weekends.value.includes(d)).length
   return (getCount(empId, status) / workingDays) * 100
 }
 
 type StatusKey = 'work' | 'vacation' | 'sick' | 'day_off'
 
-function getStatusConfig(empId: number, date: string) {
+function getStatusConfig(empId: string, date: string) {
   const status = store.getStatus(empId, date) as StatusKey
   return statusConfig[status] ?? statusConfig['work']
     }
 
-const activeCell = ref<{empId: number, date: string} | null>(null)
+const activeCell = ref<{empId: string, date: string} | null>(null)
 
-function openDropdown(empId: number, day: number) {
+function openDropdown(empId: string, day: number) {
+  console.log('openDropdown', empId, isAdmin.value, authStore.user)
   if (!authStore.user) return
   if (!isAdmin.value) return
 
@@ -128,7 +129,7 @@ const filteredDepartments = computed(() => {
   for (const [deptName, emps] of departments.value) {
     if (filterDept.value && deptName !== filterDept.value) continue
     const filtered = emps.filter((emp: any) =>
-      emp.name.toLowerCase().includes(searchQuery.value.toLowerCase())
+      emp.email.toLowerCase().includes(searchQuery.value.toLowerCase())
     )
     if (filtered.length > 0) result.set(deptName, filtered)
   }
@@ -228,51 +229,51 @@ watch(summaryMode, (val) => {
             <tr>
               <td :colspan="days.length + 2" class="dept-row">{{ deptName }}</td>
             </tr>
-            <tr v-for="emp in emps" :key="emp.id">
+            <tr v-for="emp in emps" :key="emp._id">
               <td class="name-cell">
               <NuxtLink 
               v-if="isAdmin"
-              :to="`/calendar/${emp.id}`" class="emp-link">
-                {{ emp.name }}
+              :to="`/calendar/${emp._id}`" class="emp-link">
+                {{ emp.email }}
               </NuxtLink>
-              <span v-else>{{ emp.name }}</span>
+              <span v-else>{{ emp.email }}</span>
             </td>
               <td
                 v-for="day in days"
                 :key="day"
                 :class="{ weekend: weekends.includes(day) }"
                 :style="!weekends.includes(day) ? {
-                  background: tableStyle === 'spacious' ? '' : getStatusConfig(emp.id, getDateString(day)).bg,
-                  color: getStatusConfig(emp.id, getDateString(day)).color,
-                  cursor: isAdmin.value ? 'pointer' : 'default'
+                  background: tableStyle === 'spacious' ? '' : getStatusConfig(emp._id, getDateString(day)).bg,
+                  color: getStatusConfig(emp._id, getDateString(day)).color,
+                  cursor: isAdmin ? 'pointer' : 'default'
                 } : {
                   cursor:'default'
                 }"
                 class="status-cell"
                 style="position: relative"
-                @click.stop="!weekends.includes(day) && openDropdown(emp.id, day)"
+                @click.stop="!weekends.includes(day) && openDropdown(emp._id, day)"
               >
                 <template v-if="!weekends.includes(day)">
                   <template v-if="tableStyle === 'compact'">
                     {{ iconMode === 'text'
-                      ? getStatusConfig(emp.id, getDateString(day)).label
-                      : iconConfig[store.getStatus(emp.id, getDateString(day)) as StatusKey] }}
+                      ? getStatusConfig(emp._id, getDateString(day)).label
+                      : iconConfig[store.getStatus(emp._id, getDateString(day)) as StatusKey] }}
                   </template>
                   <template v-else>
                     <div
-                      v-if="store.getStatus(emp.id, getDateString(day)) !== 'work'"
+                      v-if="store.getStatus(emp._id, getDateString(day)) !== 'work'"
                       class="spacious-block"
-                      :style="{ background: getStatusConfig(emp.id, getDateString(day)).bg, color: getStatusConfig(emp.id, getDateString(day)).color }"
+                      :style="{ background: getStatusConfig(emp._id, getDateString(day)).bg, color: getStatusConfig(emp._id, getDateString(day)).color }"
                     >
                       {{ iconMode === 'text'
-                        ? getStatusConfig(emp.id, getDateString(day)).label
-                        : iconConfig[store.getStatus(emp.id, getDateString(day)) as StatusKey] }}
+                        ? getStatusConfig(emp._id, getDateString(day)).label
+                        : iconConfig[store.getStatus(emp._id, getDateString(day)) as StatusKey] }}
                     </div>
                   </template>
                 </template>
 
                 <div
-                  v-if="activeCell?.empId === emp.id && activeCell?.date === getDateString(day)"
+                  v-if="activeCell?.empId === emp._id && activeCell?.date === getDateString(day)"
                   class="dropdown"
                 >
                   <div
@@ -294,26 +295,26 @@ watch(summaryMode, (val) => {
                       v-for="(cfg, key) in statusConfig"
                       :key="key"
                       :style="{
-                        width: getPercent(emp.id, key) + '%',
+                        width: getPercent(emp._id, key) + '%',
                         background: progressConfig[key],
                       }"
-                      :title="key + ': ' + getCount(emp.id, key) + ' дн.'"
+                      :title="key + ': ' + getCount(emp._id, key) + ' дн.'"
                     ></div>
                   </div>
                 </template>
                 <template v-else>
                   <div class="counts">
                     <span class="count-item vacation" :title="'Отпуск'">
-                      ✈️ {{ getCount(emp.id, 'vacation') }}
+                      ✈️ {{ getCount(emp._id, 'vacation') }}
                     </span>
                     <span class="count-item sick" :title="'Больничный'">
-                      🌡️ {{ getCount(emp.id, 'sick') }}
+                      🌡️ {{ getCount(emp._id, 'sick') }}
                     </span>
                     <span class="count-item dayoff" :title="'Удалёнка'">
-                      🏠 {{ getCount(emp.id, 'day_off') }}
+                      🏠 {{ getCount(emp._id, 'day_off') }}
                     </span>
                     <span class="count-item work" :title="'Удалёнка'">
-                      💼 {{ days_month - (getCount(emp.id, 'vacation') +  getCount(emp.id, 'sick') +  getCount(emp.id, 'day_off'))}}
+                      💼 {{ days_month - (getCount(emp._id, 'vacation') +  getCount(emp._id, 'sick') +  getCount(emp._id, 'day_off'))}}
                     </span>
                   </div>
                 </template>
@@ -340,7 +341,7 @@ watch(summaryMode, (val) => {
 }
 .table-wrap {
   overflow-x: auto;
-  
+  overflow: visible;
 }
 table {
   border-collapse: collapse;
@@ -456,7 +457,7 @@ td.sum-cell {
   position: absolute;
   top: 100%;
   left: 0;
-  z-index: 100;
+  z-index: 1000;
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 6px;

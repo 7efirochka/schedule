@@ -1,9 +1,13 @@
-import mysql from 'mysql2/promise'
+import { MongoClient, Db } from 'mongodb'
 
-export const db = mysql.createPool({
-  host: 'localhost',
-  port: 3306,
-  user: 'root',
-  password: '29032006',
-  database: 'calendar'
-})
+let client: MongoClient | null = null
+let db: Db | null = null
+
+export async function getDb() {
+  if (!db) {
+    client = new MongoClient('mongodb://localhost:27017')
+    await client.connect()
+    db = client.db('schedule')
+  }
+  return db
+}

@@ -1,35 +1,45 @@
-// import { prisma } from '../utils/prisma'
-
-// export default defineEventHandler(async (event) => {
-//   const query = getQuery(event)
-//   const month = query.month as string
-
-//   const [year, monthNum] = month.split('-').map(Number)
-//   const startDate = new Date(year, monthNum - 1, 1)
-//   const endDate = new Date(year, monthNum, 0)
-
-//   const schedule = await prisma.schedule.findMany({
-//     where: {
-//       date: {
-//         gte: startDate,
-//         lte: endDate
-//       }
-//     }
-//   })
-//   return schedule
-// })
-
-import { db } from '~/server/utils/db'
+import { getDb } from '~/server/utils/db'
+import { ObjectId } from 'mongodb'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
   const { employee_id, date, status } = body
+  const [year, month, day] = date.split('-').map(Number)
 
-  await db.query(`
-    INSERT INTO schedule (employee_id, date, status)
-    VALUES (?, ?, ?)
-    ON DUPLICATE KEY UPDATE status = ?
-  `, [employee_id, date, status, status])
+  const db = await getDb()
 
-  return { success: true }
+  try {
+    const existing = await db.collection('employees').findOne({
+    _id: new ObjectId(employee_id),
+    schedule: {
+        $elemMatch: { year, month, day }
+    }
+    })
+    console.log('schedule count for this day:', 
+  existing?.schedule?.filter((s: any) => 
+    s.year === year && s.month === month && s.day === day
+  ).length
+)   
+
+    if (existing) {
+    await db.collection('employees').updateOne(
+        {
+        _id: new ObjectId(employee_id),
+        'schedule': { $elemMatch: { year, month, day } }
+        },
+        { $set: { 'schedule.$.status': status } }
+    )
+    } else {
+    await db.collection('employees').updateOne(
+        { _id: new ObjectId(employee_id) },
+        { $push: { schedule: { year, month, day, status } } as any }
+    )
+    }
+
+    return { success: true }
+  } catch (e) {
+    throw createError({ statusCode: 500, message: String(e) })
+  }
+  
 })
+

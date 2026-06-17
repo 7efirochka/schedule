@@ -1,33 +1,42 @@
-// import { prisma } from '../utils/prisma'
+// import { db } from '~/server/utils/db'
 
-// // export default defineEventHandler(async (event) => {
-// //   const body = await readBody(event)
-// //   const { employee_id, date, status } = body
+// export default defineEventHandler(async (event) => {
+//   const query = getQuery(event)
+//   const month = query.month as string
 
-//   const record = await prisma.schedule.upsert({
-//     where: {
-//       employee_id_date: {
-//         employee_id,
-//         date: new Date(date)
-//       }
-//     },
-//     update: { status },
-//     create: { employee_id, date: new Date(date), status }
-//   })
-//   return record
+//   const [rows] = await db.query(`
+//     SELECT id, employee_id, DATE_FORMAT(date, '%Y-%m-%d') as date, status
+//     FROM schedule s
+//     WHERE DATE_FORMAT(s.date, '%Y-%m') = ?
+//   `, [month])
+
+//   return rows
 // })
 
-import { db } from '~/server/utils/db'
+import { getDb } from "~/server/utils/db" 
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const month = query.month as string
+  const [year, monthNum] = month.split('-').map(Number)
 
-  const [rows] = await db.query(`
-    SELECT id, employee_id, DATE_FORMAT(date, '%Y-%m-%d') as date, status
-    FROM schedule s
-    WHERE DATE_FORMAT(s.date, '%Y-%m') = ?
-  `, [month])
+  const db = await getDb()
+  const employees = await db.collection("employees").find().toArray()
 
-  return rows
+  const result: any[] = []
+
+  employees.forEach(emp => {
+    const days = (emp.schedule || []).filter(
+      (s: any) => s.year === year && s.month === monthNum
+    )
+    days.forEach((s: any) => {
+      result.push({
+        employee_id: emp._id.toString(),
+        date: `${year}-${String(monthNum).padStart(2, '0')}-${String(s.day).padStart(2, '0')}`,
+        status: s.status
+      })
+    })
+  })
+
+  return result
 })

@@ -13,6 +13,7 @@
     "@pinia/nuxt": "^0.11.3",
     "@prisma/client": "^7.8.0",
     "bootstrap": "^5.3.8",
+    "mongodb": "^7.3.0",
     "mysql2": "^3.22.4",
     "nuxt": "^4.4.7",
     "pinia": "^3.0.4",

@@ -6,7 +6,7 @@ export const useScheduleStore = defineStore('schedule', {
     employees: [] as any[],
     schedule: [] as any[],
     isLoading: false,
-      months: [] as { value: string, label: string }[]
+    months: [] as { value: string, label: string }[]
   }),
 
   actions: {
@@ -20,16 +20,14 @@ export const useScheduleStore = defineStore('schedule', {
       this.schedule = data as any[]
     },
 
-    getStatus(employeeId: number, date: string) {
+    getStatus(employeeId: string, date: string) {
       const record = this.schedule.find(s => {
-        const recordDate = s.date
-        return s.employee_id === employeeId && recordDate === date
+        return String(s.employee_id) === String(employeeId) && s.date === date
       })
       return record ? record.status : 'work'
     },
 
-
-    async updateStatus(employeeId: number, date: string, status: string) {
+    async updateStatus(employeeId: string, date: string, status: string) {
       await $fetch('/api/sched', {
         method: 'POST',
         body: { employee_id: employeeId, date, status }
@@ -40,14 +38,12 @@ export const useScheduleStore = defineStore('schedule', {
     generateMonths() {
       const now = new Date()
       const months = []
-      
       for (let i = -3; i <= 3; i++) {
         const date = new Date(now.getFullYear(), now.getMonth() + i, 1)
         const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
         const label = date.toLocaleString('ru', { month: 'long', year: 'numeric' })
         months.push({ value, label })
       }
-      
       this.months = months
     },
 
