@@ -52,7 +52,7 @@ const departments = computed(() => {
 const filtered = computed(() => {
   if (!summaryData.value) return []
   return summaryData.value.filter((emp: any) => {
-    const matchSearch = emp.name.toLowerCase().includes(searchQuery.value.toLowerCase())
+    const matchSearch = (emp.email ?? '').toLowerCase().includes(searchQuery.value.toLowerCase())
     const matchDept = filterDept.value === '' || emp.department === filterDept.value
     return matchSearch && matchDept
   })
@@ -132,8 +132,8 @@ watch(selectedYear, () => refresh())
         </thead>
         <tbody>
           <template v-if="filtered.length">
-            <tr v-for="emp in filtered" :key="emp.id">
-              <td class="col-name">{{ emp.name }}</td>
+            <tr v-for="(emp, index) in filtered" :key="index">
+              <td class="col-name">{{ emp.email }}</td>
               <td class="col-dept">{{ emp.department }}</td>
               <td class="col-num col-carried">{{ emp.days_carried_over }}</td>
               <td class="col-num col-remaining" :class="{ negative: emp.days_remaining < 0 }">
@@ -249,10 +249,6 @@ th.col-sub { min-width: 30px; font-weight: 400; }
 td.col-carried { background: #F5F0FF; color: #3B1F6B; }
 td.col-remaining { background: #F1F8F1; color: #1B5E20; }
 td.col-used { background: #FAF5FF; color: #5B21B6; }
-
-/* th.col-carried { background: #EDE8FF; color: #3B1F6B; }
-th.col-remaining { background: #E8F5E9; color: #1B5E20; }
-th.col-used { background: #F3E8FF; color: #5B21B6; } */
 
 th.vacation { background: #E6F1FB; color: #0C447C; }
 th.sick     { background: #FAECE7; color: #712B13; }

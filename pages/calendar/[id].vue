@@ -17,7 +17,7 @@ const currentEmployee = computed(() =>
 const filteredEmployees = computed(() => {
   if (!searchQuery.value) return store.employees
   return store.employees.filter((e: any) =>
-    e.name.toLowerCase().includes(searchQuery.value.toLowerCase())
+    e.email.toLowerCase().includes(searchQuery.value.toLowerCase())
   )
 })
 
@@ -46,7 +46,9 @@ const firstDayOfMonth = computed(() => {
   return day === 0 ? 6 : day - 1
 })
 
-const daysInMonth = new Date(currentDate.value.year, currentDate.value.month, 0).getDate()
+const daysInMonth = computed(() => 
+  new Date(currentDate.value.year, currentDate.value.month, 0).getDate()
+)
 
 const selectedDays = ref<Set<number>>(new Set())
 const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
@@ -57,7 +59,7 @@ const calendarCells = computed(() => {
   const firstDay = new Date(currentDate.value.year, currentDate.value.month-1, 1).getDay()
   const start = firstDay === 0 ? 6 : firstDay - 1
   for (let i = 0; i < start; i++) cells.push(null)
-  for (let i = 1; i <= daysInMonth; i++) cells.push(i)
+  for (let i = 1; i <= daysInMonth.value; i++) cells.push(i)
   while (cells.length % 7 !== 0) cells.push(null)
   return cells
 })
@@ -76,7 +78,7 @@ function getDateString(day: number) {
 }
 
 function getCellStatus(day: number): StatusKey {
-  return store.getStatus(empId, getDateString(day)) as StatusKey
+  return store.getStatus(String(empId), getDateString(day)) as StatusKey
 }
 
 onMounted(async () => {
@@ -124,13 +126,13 @@ function closeDropdown() {
 
 async function selectStatus(status: string) {
   if (activeDropdown.value === null) return
-  await store.updateStatus(empId, getDateString(activeDropdown.value), status)
+  await store.updateStatus(String(empId), getDateString(activeDropdown.value), status)
   activeDropdown.value = null
 }
 
 async function applyBulkStatus(status: string) {
   for (const day of selectedDays.value) {
-    await store.updateStatus(empId, getDateString(day), status)
+    await store.updateStatus(String(empId), getDateString(day), status)
   }
   await store.fetchSchedule()
   selectedDays.value = new Set()

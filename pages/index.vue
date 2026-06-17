@@ -99,7 +99,6 @@ function getStatusConfig(empId: string, date: string) {
 const activeCell = ref<{empId: string, date: string} | null>(null)
 
 function openDropdown(empId: string, day: number) {
-  console.log('openDropdown', empId, isAdmin.value, authStore.user)
   if (!authStore.user) return
   if (!isAdmin.value) return
 
