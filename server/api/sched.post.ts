@@ -14,12 +14,7 @@ export default defineEventHandler(async (event) => {
     schedule: {
         $elemMatch: { year, month, day }
     }
-    })
-    console.log('schedule count for this day:', 
-  existing?.schedule?.filter((s: any) => 
-    s.year === year && s.month === month && s.day === day
-  ).length
-)   
+    })   
 
     if (existing) {
     await db.collection('employees').updateOne(
