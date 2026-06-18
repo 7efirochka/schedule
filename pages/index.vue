@@ -532,15 +532,17 @@ td.sum-cell {
 }
 
 .table-wrap.spacious th {
-  padding: 10px 16px;
-  font-size: 13px;
-  min-width: 80px;
-  background: #f9fafb;
-  border: 1px solid #d1d5db;
+  padding: 12px 20px;
+  font-size: 14px;
+  min-width: 100px;
+  border: none;
+  border-bottom: 2px solid #e5e7eb;
+  border-right: 1px solid #f3f4f6;
+  background: #ffffff;
 }
 
 .table-wrap.spacious th.name-col {
-  min-width: 180px;
+  min-width: 220px;
 }
 
 
@@ -550,54 +552,63 @@ td.sum-cell {
 }
 
 .table-wrap.spacious td {
-  height: 48px;
-  border: 1px solid #d1d5db;
-  padding: 4px 8px;
+  height: 56px;
+  min-width: 140px; 
+  border: none;
+  border-bottom: 1px solid #f3f4f6;
+  border-right: 1px solid #f3f4f6;
+  padding: 6px 8px;
+  vertical-align: middle;
 }
+
 
 .table-wrap.spacious td.name-cell {
   font-size: 14px;
   font-weight: 500;
-  min-width: 180px;
-  padding: 0 16px;
+  min-width: 220px;
+  padding: 0 20px;
   background: #ffffff;
-  border-right: 2px solid #9ca3af;
+  border-right: 2px solid #e5e7eb;
 }
 
 .table-wrap.spacious td.weekend {
-  background: #f3f4f6;
-  border: 1px solid #d1d5db;
+  background: #fafafa;
+  border-right: 1px solid #f0f0f0;
 }
 
 .table-wrap.spacious td.dept-row {
   background: #f3f4f6;
   font-size: 12px;
   font-weight: 600;
-  border: 1px solid #d1d5db;
-  padding: 6px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 6px 20px;
   color: #4b5563;
 }
 
 .table-wrap.spacious td.sum-cell {
-  background: #f9fafb;
-  border-left: 2px solid #9ca3af;
+  background: transparent;
+  border-left: 2px solid #e5e7eb;
+  min-width: 120px;
 }
 
 .table-wrap.spacious td.status-cell {
   background: transparent;
-  border: 1px solid #d1d5db;
+  padding: 4px 6px;
+}
+
+.table-wrap.spacious tr:hover td {
+  background: #fafafa;
 }
 
 .spacious-block {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 12px;
+  border-radius: 10px;
+  font-size: 13px;
   font-weight: 500;
   width: 100%;
-  height: 32px;
+  height: 44px;
 }
 
 .table-wrap.spacious td.status-cell {
@@ -612,7 +623,7 @@ td.sum-cell {
 .table-wrap.spacious th {
   padding: 10px 16px;
   font-size: 13px;
-  min-width: 80px;
+  min-width: 140px;
   border: none;
   border-bottom: 2px solid #e5e7eb;
   border-right: 1px solid #f3f4f6;
