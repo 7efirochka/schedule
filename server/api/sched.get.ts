@@ -1,18 +1,3 @@
-// import { db } from '~/server/utils/db'
-
-// export default defineEventHandler(async (event) => {
-//   const query = getQuery(event)
-//   const month = query.month as string
-
-//   const [rows] = await db.query(`
-//     SELECT id, employee_id, DATE_FORMAT(date, '%Y-%m-%d') as date, status
-//     FROM schedule s
-//     WHERE DATE_FORMAT(s.date, '%Y-%m') = ?
-//   `, [month])
-
-//   return rows
-// })
-
 import { getDb } from "~/server/utils/db" 
 
 export default defineEventHandler(async (event) => {

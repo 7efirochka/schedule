@@ -24,8 +24,6 @@
       })
 
       const carriedOver = emp.vacationBalance?.[String(year)] ?? 0
-      // console.log('emp vacationBalance:', employees.email, employees.vacationBalance)
-      console.log('carriedOver:', carriedOver)
 
       return {
         id: emp._id,
