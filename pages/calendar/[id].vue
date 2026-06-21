@@ -26,6 +26,14 @@ onMounted(async () => {
   await store.fetchSchedule()
 })
 
+// текущая дата
+const today = new Date()
+const isToday = (day: number) => {
+  return day === today.getDate() &&
+    currentDate.value.month === today.getMonth() + 1 &&
+    currentDate.value.year === today.getFullYear()
+}
+
 const route = useRoute()
 const empId = route.params.id as string 
 
@@ -186,7 +194,7 @@ function nextMonth() {
       <button @click.stop="prevMonth" class="arrow-btn">‹</button>
       <div class="cal-title">
         <span class="cal-month">{{  monthName }}</span>
-        <span class="cal-year">2026</span>
+        <span class="cal-year">{{ currentDate.year }}</span>
       </div>
       <button @click.stop="nextMonth" class="arrow-btn">›</button>
     </div>
@@ -202,6 +210,7 @@ function nextMonth() {
           empty: day === null,
           weekend: day && isWeekend(day),
           selected: day && selectedDays.has(day),
+          today: day && isToday(day),
         }"
         @click.stop="day && onClick(day)"
         :style="[
@@ -210,10 +219,17 @@ function nextMonth() {
       ]"
       >
         <span v-if="day" class="cal-day-num">{{ day }}</span>
-        <span v-if="day && !isWeekend(day)"
+        <!-- для точек в иконках -->
+        <!-- <span v-if="day && !isWeekend(day)"
          class="cal-status-dot"
          :style="{ background: statusConfig[getCellStatus(day)].dot }"
-         ></span>
+         ></span> -->
+
+         <span v-if="day && !isWeekend(day)" class="cal-status-dot">
+          {{ getCellStatus(day) === 'work' ? '💼' : 
+            getCellStatus(day) === 'vacation' ? '✈️' : 
+            getCellStatus(day) === 'sick' ? '🌡️' : '🏠' }}
+        </span>
       <div
         v-if="activeDropdown !== null && activeDropdown === day"
         class="cal-dropdown"
@@ -419,18 +435,33 @@ function nextMonth() {
   outline: 2px solid #1a1a1a;
   outline-offset: -2px;
 }
+.cal-cell.today {
+  outline: 2px solid #1a1a1a;
+  outline-offset: -2px;
+}
+
+.cal-cell.today .cal-day-num {
+  color: #ffffff;
+  background: #1a1a1a;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+}
 .cal-day-num {
   font-size: 14px;
   font-weight: 600;
   color: #1a1a1a;
 }
+
 .cal-status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #639922;
+  font-size: 12px;
   margin-top: auto;
   align-self: flex-end;
+  line-height: 1;
 }
 .cal-dropdown {
   position: absolute;

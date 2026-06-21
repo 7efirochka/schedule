@@ -170,8 +170,6 @@ function logout() {
   display: flex;
   height: 52px;
   gap: 7px;
-  /* align-items: center;
-  justify-content: space-between; */
   flex: 1;
 }
 
