@@ -147,7 +147,11 @@ function logout() {
   background: #ffffff;
   border-bottom: 1px solid #e5e7eb;
   height: 52px;
-  position: relative;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
 }
 .topbar-inner {
   display: flex;
@@ -179,6 +183,7 @@ function logout() {
   padding: 20px 24px;
   background: #ffffff;
   min-height: calc(100vh - 52px);
+  margin-top: 52px;
 }
 
 .nav-tab {
