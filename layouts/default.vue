@@ -148,7 +148,11 @@ function logout() {
   background: #ffffff;
   border-bottom: 1px solid #e5e7eb;
   height: 52px;
-  position: relative;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
 }
 .topbar-inner {
   display: flex;
@@ -167,8 +171,6 @@ function logout() {
   display: flex;
   height: 52px;
   gap: 7px;
-  /* align-items: center;
-  justify-content: space-between; */
   flex: 1;
 }
 
