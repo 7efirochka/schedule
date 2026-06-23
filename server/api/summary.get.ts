@@ -5,13 +5,13 @@
     const year = Number(query.year ?? new Date().getFullYear())
 
     const db = await getDb()
-    const employees = await db.collection('employees').find().sort({ department: 1, name: 1 }).toArray()
+    const employees = await db.collection('timesheet').find().sort({ department: 1, name: 1 }).toArray()
 
     const result = employees.map((emp: any) => {
       const months: any = {}
       let totalVacation = 0
 
-      const yearSchedule = (emp.schedule || []).filter((s: any) => s.year === year)
+      const yearSchedule = (JSON.parse(emp.schedule) || []).filter((s: any) => s.year === year)
 
       yearSchedule.forEach((s: any) => {
         const monthKey = `${year}-${String(s.month).padStart(2, '0')}`

@@ -1,178 +1,3 @@
-<script setup lang="ts">
-
-const store = useScheduleStore()
-const authStore = useAuthStore()
-
-const isAdmin = computed(() => authStore.user?.role === 'admin')
-
-const days_week = ["вс","пн","вт","ср","чт","пт","сб"]
-
-onMounted(async () => {
-  store.generateMonths()
-  await store.fetchEmployees()
-  await store.fetchSchedule()
-})
-
-const currentDate = computed(() => {
-  const [year, month] = store.currentMonth.split('-').map(Number)
-  return { year, month }
-})
-
-const days_month = computed(() => new Date(currentDate.value.year, currentDate.value.month, 0).getDate())
-
-const days = computed(() => Array.from({ length: days_month.value }, (_, i) => i + 1))
-
-const dayNames = computed(() => {
-  const names = []
-  for (let i = 1; i <= days_month.value; i++) {
-    const date = new Date(currentDate.value.year, currentDate.value.month - 1, i)
-    names.push(days_week[date.getDay()])
-  }
-  return names
-})
-
-const weekends = computed(() => {
-  const w = []
-  for (let i = 1; i <= days_month.value; i++) {
-    const date = new Date(currentDate.value.year, currentDate.value.month - 1, i)
-    if (date.getDay() === 0 || date.getDay() === 6) w.push(i)
-  }
-  return w
-})
-
-const iconMode = ref<'text' | 'icon'>('text')
-
-const iconConfig = {
-  work:     '•',
-  day_off:  '🏠',
-  vacation: '✈️',
-  sick:     '🌡️',
-}
-
-const statusConfig = {
-  work:     { label: 'Р',  bg: '#EAF3DE', color: '#27500A' },
-  day_off:  { label: 'Уд', bg: '#FAEEDA', color: '#633806' },
-  vacation: { label: 'От', bg: '#E6F1FB', color: '#0C447C' },
-  sick:     { label: 'Б',  bg: '#FAECE7', color: '#712B13' },
-}
-
-const progressConfig = {
-  work:     '#9AF797',
-  day_off:  '#F0A884',
-  vacation: '#8DCAF2',
-  sick:     '#F55B5B',
-}
-
-const departments = computed(() => {
-  const map = new Map()
-  store.employees.forEach(emp => {
-    const deptName = emp.department || 'Без отдела'
-    if (!map.has(deptName)) map.set(deptName, [])
-    map.get(deptName).push(emp)
-  })
-  return map
-})
-
-function getDateString(day: number) {
-  return `${store.currentMonth}-${String(day).padStart(2, '0')}`
-}
-
-function getCount(empId: string, status: string) {
-  return days.value.filter(d => {
-    if (weekends.value.includes(d)) return false
-    return store.getStatus(empId, getDateString(d)) === status
-  }).length
-}
-
-function getPercent(empId: string, status: string) {
-  const workingDays = days.value.filter(d => !weekends.value.includes(d)).length
-  return (getCount(empId, status) / workingDays) * 100
-}
-
-type StatusKey = 'work' | 'vacation' | 'sick' | 'day_off'
-
-function getStatusConfig(empId: string, date: string) {
-  const status = store.getStatus(empId, date) as StatusKey
-  return statusConfig[status] ?? statusConfig['work']
-    }
-
-const activeCell = ref<{empId: string, date: string} | null>(null)
-
-function openDropdown(empId: string, day: number) {
-  if (!authStore.user) return
-  if (!isAdmin.value) return
-
-  const date = getDateString(day)
-  if (activeCell.value?.empId === empId && activeCell.value?.date === date) {
-    activeCell.value = null
-  } else {
-    activeCell.value = { empId, date }
-  }
-}
-
-async function selectStatus(status: string) {
-  if (!activeCell.value) return
-  await store.updateStatus(activeCell.value.empId, activeCell.value.date, status)
-  activeCell.value = null
-}
-
-function closeDropdown() {
-  activeCell.value = null
-}
-
-const searchQuery = ref('')
-const filterDept = ref('')
-
-const filteredDepartments = computed(() => {
-  const result = new Map()
-  for (const [deptName, emps] of departments.value) {
-    if (filterDept.value && deptName !== filterDept.value) continue
-    const filtered = emps.filter((emp: any) =>
-      emp.email.toLowerCase().includes(searchQuery.value.toLowerCase())
-    )
-    if (filtered.length > 0) result.set(deptName, filtered)
-  }
-  return result
-})
-
-// переключатель темы (компактный или просторный)
-const tableStyle = ref<'compact' | 'spacious'>('compact')
-
-onMounted(() => {
-  const saved = localStorage.getItem(`tableStyle-${authStore.user?.id}`)
-  if (saved) tableStyle.value = saved as 'compact' | 'spacious'
-  
-  const savedIcons = localStorage.getItem(`iconMode-${authStore.user?.id}`)
-  if (savedIcons) iconMode.value = savedIcons as 'text' | 'icon'
-})
-
-watch(tableStyle, (val) => {
-  localStorage.setItem(`tableStyle-${authStore.user?.id}`, val)
-})
-
-watch(iconMode, (val) => {
-  localStorage.setItem(`iconMode-${authStore.user?.id}`, val)
-})
-
-// переключатель для колонки итога (прогресс или статистика)
-const summaryMode = ref<'bar' | 'counts'>('bar')
-
-onMounted(() => {
-  const saved = localStorage.getItem(`tableStyle-${authStore.user?.id}`)
-  if (saved) tableStyle.value = saved as 'compact' | 'spacious'
-  
-  const savedIcons = localStorage.getItem(`iconMode-${authStore.user?.id}`)
-  if (savedIcons) iconMode.value = savedIcons as 'text' | 'icon'
-
-  const savedSummary = localStorage.getItem(`summaryMode-${authStore.user?.id}`)
-  if (savedSummary) summaryMode.value = savedSummary as 'bar' | 'counts'
-})
-
-watch(summaryMode, (val) => {
-  localStorage.setItem(`summaryMode-${authStore.user?.id}`, val)
-})
-
-</script>
 
 <template>
   <div @click="closeDropdown">
@@ -228,15 +53,16 @@ watch(summaryMode, (val) => {
             <tr>
               <td :colspan="days.length + 2" class="dept-row">{{ deptName }}</td>
             </tr>
+
             <tr v-for="emp in emps" :key="emp._id">
               <td class="name-cell">
-              <NuxtLink 
-              v-if="isAdmin"
-              :to="`/calendar/${emp._id}`" class="emp-link">
-                {{ emp.email }}
-              </NuxtLink>
-              <span v-else>{{ emp.email }}</span>
-            </td>
+                <NuxtLink 
+                  v-if="isAdmin"
+                  :to="`/calendar/${emp._id}`" class="emp-link">
+                  {{ setDisplayName(emp.email) }}
+                </NuxtLink>
+                <span v-else>{{ setDisplayName(emp.email) }}</span>
+              </td>
               <td
                 v-for="day in days"
                 :key="day"
@@ -326,27 +152,273 @@ watch(summaryMode, (val) => {
   </div>
 </template>
 
+
+
+<script setup lang="ts">
+
+const store = useScheduleStore()
+const authStore = useAuthStore()
+
+const isAdmin = computed(() => authStore.user?.role === 'admin')
+
+const days_week = ["вс","пн","вт","ср","чт","пт","сб"]
+
+onMounted(async () => {
+  store.generateMonths()
+  await store.fetchEmployees()
+  await store.fetchJiraUsers()
+  await store.fetchSchedule()
+})
+
+const currentDate = computed(() => {
+  const [year, month] = store.currentMonth.split('-').map(Number)
+  return { year: year!, month: month! }
+})
+
+const days_month = computed(() => new Date(currentDate.value.year, currentDate.value.month, 0).getDate())
+
+const days = computed(() => Array.from({ length: days_month.value }, (_, i) => i + 1))
+
+const dayNames = computed(() => {
+  const names = []
+  for (let i = 1; i <= days_month.value; i++) {
+    const date = new Date(currentDate.value.year, currentDate.value.month - 1, i)
+    names.push(days_week[date.getDay()])
+  }
+  return names
+})
+
+const weekends = computed(() => {
+  const w = []
+  for (let i = 1; i <= days_month.value; i++) {
+    const date = new Date(currentDate.value.year, currentDate.value.month - 1, i)
+    if (date.getDay() === 0 || date.getDay() === 6) w.push(i)
+  }
+  return w
+})
+
+const iconMode = ref<'text' | 'icon'>('text')
+
+const iconConfig = {
+  work:     '•',
+  day_off:  '🏠',
+  vacation: '✈️',
+  sick:     '🌡️',
+}
+
+const statusConfig = {
+  work:     { label: 'Р',  bg: '#EAF3DE', color: '#27500A' },
+  day_off:  { label: 'Уд', bg: '#FAEEDA', color: '#633806' },
+  vacation: { label: 'От', bg: '#E6F1FB', color: '#0C447C' },
+  sick:     { label: 'Б',  bg: '#FAECE7', color: '#712B13' },
+}
+
+const progressConfig = {
+  work:     '#9AF797',
+  day_off:  '#F0A884',
+  vacation: '#8DCAF2',
+  sick:     '#F55B5B',
+}
+
+const departments = computed(() => {
+  const map = new Map()
+
+  store.employees.forEach(emp => {
+    const deptName = emp.department || 'Без отдела'
+    if (!map.has(deptName)) map.set(deptName, [])
+    map.get(deptName).push(emp)
+  })
+  return map
+})
+
+
+function setDisplayName(email: string) {
+  return store.jiraUsers.find(user => user.email === email)?.display_name
+}
+
+
+
+function getDateString(day: number) {
+  return `${store.currentMonth}-${String(day).padStart(2, '0')}`
+}
+
+
+
+function getCount(empId: string, status: string) {
+  return days.value.filter(d => {
+    if (weekends.value.includes(d)) return false
+    return store.getStatus(empId, getDateString(d)) === status
+  }).length
+}
+
+
+
+function getPercent(empId: string, status: string) {
+  const workingDays = days.value.filter(d => !weekends.value.includes(d)).length
+  return (getCount(empId, status) / workingDays) * 100
+}
+
+
+type StatusKey = 'work' | 'vacation' | 'sick' | 'day_off'
+
+
+function getStatusConfig(empId: string, date: string) {
+  const status = store.getStatus(empId, date) as StatusKey
+  return statusConfig[status] ?? statusConfig['work']
+    }
+
+const activeCell = ref<{empId: string, date: string} | null>(null)
+
+function openDropdown(empId: string, day: number) {
+  if (!authStore.user) return
+  if (!isAdmin.value) return
+
+  const date = getDateString(day)
+  if (activeCell.value?.empId === empId && activeCell.value?.date === date) {
+    activeCell.value = null
+  } else {
+    activeCell.value = { empId, date }
+  }
+}
+
+async function selectStatus(status: string) {
+  if (!activeCell.value) return
+  await store.updateStatus(activeCell.value.empId, activeCell.value.date, status)
+  activeCell.value = null
+}
+
+function closeDropdown() {
+  activeCell.value = null
+}
+
+
+
+const searchQuery = ref('')
+const filterDept = ref('')
+
+const filteredDepartments = computed(() => {
+  const result = new Map()
+
+  for (const [deptName, emps] of departments.value) {
+    if (filterDept.value && deptName !== filterDept.value) continue
+
+    const filtered = emps.filter((emp: any) =>
+      setDisplayName(emp.email)?.toLowerCase().includes(searchQuery.value.toLowerCase())
+    )
+    if (filtered.length > 0) result.set(deptName, filtered)
+  }
+
+  return result
+})
+
+// переключатель темы (компактный или просторный)
+const tableStyle = ref<'compact' | 'spacious'>('compact')
+
+
+
+
+
+
+
+watch(tableStyle, (val) => {
+  localStorage.setItem(`tableStyle-${authStore.user?.id}`, val)
+})
+
+
+
+watch(iconMode, (val) => {
+  localStorage.setItem(`iconMode-${authStore.user?.id}`, val)
+})
+
+// переключатель для колонки итога (прогресс или статистика)
+const summaryMode = ref<'bar' | 'counts'>('bar')
+
+
+onMounted(() => {
+  const saved = localStorage.getItem(`tableStyle-${authStore.user?.id}`)
+  if (saved) tableStyle.value = saved as 'compact' | 'spacious'
+  
+  const savedIcons = localStorage.getItem(`iconMode-${authStore.user?.id}`)
+  if (savedIcons) iconMode.value = savedIcons as 'text' | 'icon'
+
+  const savedSummary = localStorage.getItem(`summaryMode-${authStore.user?.id}`)
+  if (savedSummary) summaryMode.value = savedSummary as 'bar' | 'counts'
+})
+
+watch(summaryMode, (val) => {
+  localStorage.setItem(`summaryMode-${authStore.user?.id}`, val)
+})
+
+</script>
+
+
+
 <style scoped>
 .legend {
   display: flex;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-left: 20px;
   flex-wrap: wrap;
 }
+
+
 .legend-item {
   font-size: 12px;
   padding: 3px 10px;
   border-radius: 4px;
 }
+
+
 .table-wrap {
   overflow-x: auto;
-  overflow: visible;
+  padding: 20px;
 }
+
+
 table {
   border-collapse: collapse;
   font-size: 12px;
-  width: 90%
+  width: 100%;
 }
+
+/* Добавляем объёмную тень для всей таблицы */
+.table-wrap table {
+  border-collapse: collapse;
+  font-size: 12px;
+  width: 100%;
+  border-radius: 12px;
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06),
+    0 10px 15px -3px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+
+.spacious-block {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  width: 100%;
+  height: 44px;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 
+    0 1px 3px rgba(0, 0, 0, 0.06),
+    0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.spacious-block:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 
+    0 10px 25px rgba(0, 0, 0, 0.15),
+    0 4px 10px rgba(0, 0, 0, 0.08);
+  z-index: 5;
+}
+
+
 th {
   background: #f3f4f6;
   padding: 5px 4px;
@@ -355,13 +427,17 @@ th {
   font-weight: 500;
   font-size: 11px;
 }
+
+
 th.name-col {
   text-align: left;
   padding-left: 10px;
   min-width: 120px;
 }
+
+
 th.sum-col { min-width: 80px; }
-th.weekend { color: #9ca3af; }
+th.weekend { color: #e92c2c; }
 td {
   border: 1px solid #e5e7eb;
   text-align: center;
@@ -369,6 +445,8 @@ td {
   height: 26px;
   font-size: 11px;
 }
+
+
 td.name-cell {
   text-align: left;
   padding: 0 10px;
@@ -376,27 +454,43 @@ td.name-cell {
   background: #ffffff;
   min-width: 120px;
 }
+
+
 td.sum-cell {
   background: #f3f4f6;
   font-size: 11px;
   padding: 0 6px;
   color: #6b7280;
 }
+
+
 td.weekend {
   background: #f3f4f6;
 }
+
+
 td.status-cell {
   cursor: pointer;
 }
+
+
+
+
 td.dept-row {
-  background: #f3f4f6;
+  background: linear-gradient(135deg, #f8f9fa 0%, #f3f4f6 100%);
   font-size: 11px;
-  font-weight: 500;
-  color: #6b7280;
+  font-weight: 600;
+  color: #4b5563;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 4px 10px;
   text-align: left;
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  position: sticky;
+  left: 0;
+  z-index: 5;
 }
 
 td.sum-cell {
@@ -426,20 +520,28 @@ td.sum-cell {
   justify-content: center;
   flex-wrap: wrap;
 }
+
+
 .count-item {
   font-size: 11px;
   padding: 2px 6px;
   border-radius: 4px;
   white-space: nowrap;
 }
+
+
 .count-item.vacation {
   background: #E6F1FB;
   color: #0C447C;
 }
+
+
 .count-item.sick {
   background: #FAECE7;
   color: #712B13;
 }
+
+
 .count-item.dayoff {
   background: #FAEEDA;
   color: #633806;
@@ -459,38 +561,74 @@ td.sum-cell {
   z-index: 1000;
   background: #ffffff;
   border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  min-width: 130px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  border-radius: 8px;
+  min-width: 150px;
+  box-shadow: 
+    0 10px 40px rgba(0, 0, 0, 0.15),
+    0 4px 12px rgba(0, 0, 0, 0.08),
+    0 2px 4px rgba(0, 0, 0, 0.04);
+  padding: 4px 0;
+  animation: dropdownSlide 0.2s ease;
 }
+
+@keyframes dropdownSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .dropdown-item {
-  padding: 6px 12px;
+  padding: 8px 16px;
   font-size: 12px;
   cursor: pointer;
   white-space: nowrap;
+  transition: all 0.15s ease;
+  margin: 2px 4px;
+  border-radius: 4px;
 }
+
 .dropdown-item:hover {
-  filter: brightness(0.95);
+  transform: scale(1.02);
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.12);
+  filter: brightness(1.05);
 }
 
 
 .filters {
   display: flex;
   gap: 10px;
-  margin-bottom: 12px;
+  margin: 12px;
   flex-wrap: wrap;
 }
+
+
 .search-input {
   font-size: 13px;
   padding: 6px 12px;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
-  width: 200px;
   outline: none;
+  transition: all 0.2s ease;
+  box-shadow: 
+    0 1px 3px rgba(0, 0, 0, 0.05),
+    inset 0 1px 2px rgba(0, 0, 0, 0.03);
 }
+
 .search-input:focus {
-  border-color: #9ca3af;
+  border-color: #6b7280;
+  box-shadow: 
+    0 0 0 3px rgba(107, 114, 128, 0.15),
+    0 2px 8px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
 }
+
+
 .filter-select {
   font-size: 13px;
   padding: 6px 12px;
@@ -498,6 +636,10 @@ td.sum-cell {
   border-radius: 8px;
   background: #ffffff;
   outline: none;
+  width: 15rem;
+  box-shadow: 
+    0 1px 3px rgba(0, 0, 0, 0.05),
+    inset 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
 /*  кнопка переключатель */
@@ -510,6 +652,8 @@ td.sum-cell {
   align-items: flex-start;
 
 }
+
+
 .icon-toggle {
   font-size: 12px;
   padding: 4px 12px;
@@ -519,6 +663,8 @@ td.sum-cell {
   cursor: pointer;
   white-space: nowrap;
 }
+
+
 .icon-toggle:hover {
   background: #f3f4f6;
 }

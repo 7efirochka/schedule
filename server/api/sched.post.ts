@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
   const db = await getDb()
 
   try {
-    const existing = await db.collection('employees').findOne({
+    const existing = await db.collection('timesheet').findOne({
     _id: new ObjectId(employee_id),
     schedule: {
         $elemMatch: { year, month, day }
@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
     })   
 
     if (existing) {
-    await db.collection('employees').updateOne(
+    await db.collection('timesheet').updateOne(
         {
         _id: new ObjectId(employee_id),
         'schedule': { $elemMatch: { year, month, day } }
@@ -25,7 +25,7 @@ export default defineEventHandler(async (event) => {
         { $set: { 'schedule.$.status': status } }
     )
     } else {
-    await db.collection('employees').updateOne(
+    await db.collection('timesheet').updateOne(
         { _id: new ObjectId(employee_id) },
         { $push: { schedule: { year, month, day, status } } as any }
     )

@@ -143,6 +143,7 @@ function logout() {
 </template>
 
 <style scoped>
+
 .topbar {
   background: #ffffff;
   border-bottom: 1px solid #e5e7eb;
@@ -176,9 +177,9 @@ function logout() {
 }
 
 .page-content {
-  padding: 20px 24px;
+  /* padding: 20px 24px; */
   background: #ffffff;
-  min-height: calc(100vh - 52px);
+  /* min-height: calc(100vh - 52px); */
 }
 
 .nav-tab {

@@ -1,13 +1,23 @@
-import { MongoClient, Db } from 'mongodb'
+import { MongoClient, Db, IsAny } from 'mongodb'
 
 let client: MongoClient | null = null
 let db: Db | null = null
 
-export async function getDb() {
-  if (!db) {
-    client = new MongoClient('mongodb://localhost:27017')
-    await client.connect()
-    db = client.db('schedule')
+const config = useRuntimeConfig()
+
+export async function getDb(): Promise<Db> {
+  try {
+    if (!db) {
+      client = new MongoClient(config.mongoUrl)
+      await client.connect()
+      console.log('✅ MongoDB подключен')
+
+    db = client.db('atlas_pro')
+
   }
-  return db
+  } catch (error: any) {
+    console.error('❌ Ошибка MongoDB:', error.message)
+  }
+
+  return db as Db
 }

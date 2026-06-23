@@ -44,7 +44,7 @@ const authStore = useAuthStore()
 
 <style scoped>
 .auth-wrapper {
-  min-height: 100vh;
+  min-height: calc(100vh - 52px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -57,6 +57,8 @@ const authStore = useAuthStore()
   padding: 40px;
   width: 100%;
   max-width: 400px;
+  position: relative;
+  top: -120px;
 }
 .auth-title {
   font-size: 20px;

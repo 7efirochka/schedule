@@ -4,21 +4,30 @@ export const useScheduleStore = defineStore('schedule', {
   state: () => ({
     currentMonth: `${new Date().getFullYear()}-${String(new Date().getMonth() + 2).padStart(2, '0')}`,
     employees: [] as any[],
+    jiraUsers: [] as any[],
     schedule: [] as any[],
     isLoading: false,
     months: [] as { value: string, label: string }[]
   }),
 
   actions: {
+
     async fetchEmployees() {
       const data = await $fetch('/api/emp')
       this.employees = data as any[]
     },
 
+    async fetchJiraUsers() {
+      const payload: any = await $fetch('/api/jira-users')
+      this.jiraUsers = payload?.data
+    },
+
+
     async fetchSchedule() {
       const data = await $fetch(`/api/sched?month=${this.currentMonth}`)
       this.schedule = data as any[]
     },
+
 
     getStatus(employeeId: string, date: string) {
       const record = this.schedule.find(s => {
@@ -27,6 +36,7 @@ export const useScheduleStore = defineStore('schedule', {
       return record ? record.status : 'work'
     },
 
+
     async updateStatus(employeeId: string, date: string, status: string) {
       await $fetch('/api/sched', {
         method: 'POST',
@@ -34,6 +44,7 @@ export const useScheduleStore = defineStore('schedule', {
       })
       await this.fetchSchedule()
     },
+
 
     generateMonths() {
       const now = new Date()
@@ -47,9 +58,12 @@ export const useScheduleStore = defineStore('schedule', {
       this.months = months
     },
 
+
     async setMonth(month: string) {
       this.currentMonth = month
       await this.fetchSchedule()
     }
+
+    
   }
 })

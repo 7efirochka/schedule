@@ -6,12 +6,14 @@ export default defineEventHandler(async (event) => {
   const [year, monthNum] = month.split('-').map(Number)
 
   const db = await getDb()
-  const employees = await db.collection("employees").find().toArray()
+  const employees = await db.collection("timesheet").find().toArray()
+
 
   const result: any[] = []
 
   employees.forEach(emp => {
-    const days = (emp.schedule || []).filter(
+
+    const days = (JSON.parse(emp.schedule) || []).filter(
       (s: any) => s.year === year && s.month === monthNum
     )
     days.forEach((s: any) => {
