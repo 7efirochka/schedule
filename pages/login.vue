@@ -1,41 +1,76 @@
 <script setup lang="ts">
+definePageMeta({
+  layout: false
+})
+
 const authStore = useAuthStore()
 
-    const email = ref('')
-    const error = ref('')
+const email = ref('')
+const password = ref('')
+const error = ref('')
+const isLoading = ref(false)
 
-    async function login(){
-        try {
-        const data = await $fetch('/api/auth', {
-            method: "POST",
-            body: { email: email.value }
-        })
-        authStore.setUser(data)
-        navigateTo("/")
-        } catch (e) {
-            error.value = "Пользователь не найден"
-        }
+async function login() {
+  if (!email.value || !password.value) {
+    error.value = 'Заполните все поля'
+    return
+  }
+
+  isLoading.value = true
+  error.value = ''
+
+  try {
+    const response: any = await $fetch('/api/auth/login', {
+      method: 'POST',
+      body: {
+        email: email.value,
+        password: password.value
+      }
+    })
+
+    if (response.token) {
+      authStore.setUser(response)
+      navigateTo('/')
     }
+  } catch (err: any) {
+    error.value = err.statusMessage || 'Неверный email или пароль'
+  } finally {
+    isLoading.value = false
+  }
+}
 </script>
-
 
 <template>
   <div class="auth-wrapper">
     <div class="auth-card">
       <h2 class="auth-title">Вход в систему</h2>
-      <p class="auth-sub">Введите ваш email чтобы войти</p>
+      <p class="auth-sub">Введите ваши данные для входа</p>
 
       <div class="form-group">
         <label class="form-label">Email</label>
         <input
           type="email"
           class="form-input"
-          placeholder="ivanov@company.ru"
+          placeholder="vas@atlas-pro24.ru"
           v-model="email"
+          @keydown.enter="login"
         />
       </div>
 
-      <button class="btn-submit" @click="login">Войти</button>
+      <div class="form-group">
+        <label class="form-label">Пароль</label>
+        <input
+          type="password"
+          class="form-input"
+          placeholder="Введите пароль"
+          v-model="password"
+          @keydown.enter="login"
+        />
+      </div>
+
+      <button class="btn-submit" @click="login" :disabled="isLoading">
+        {{ isLoading ? 'Вход...' : 'Войти' }}
+      </button>
 
       <p class="auth-error" v-if="error">{{ error }}</p>
     </div>
@@ -44,7 +79,7 @@ const authStore = useAuthStore()
 
 <style scoped>
 .auth-wrapper {
-  min-height: calc(100vh - 52px);
+  min-height: calc(100vh - 62px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -58,7 +93,8 @@ const authStore = useAuthStore()
   width: 100%;
   max-width: 400px;
   position: relative;
-  top: -120px;
+  top: -60px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
 }
 .auth-title {
   font-size: 20px;
@@ -109,8 +145,12 @@ const authStore = useAuthStore()
   margin-top: 8px;
   transition: background 0.15s;
 }
-.btn-submit:hover {
+.btn-submit:hover:not(:disabled) {
   background: #333333;
+}
+.btn-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 .auth-error {
   font-size: 13px;

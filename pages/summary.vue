@@ -1,7 +1,34 @@
 <script setup lang="ts">
-
 import { productionCalendar } from '~/data/productionCalendar'
+import { useAuthStore } from '~/stores/useAuthStore'
+import { useScheduleStore } from '~/stores/useScheduleStore'
+import { storeToRefs } from 'pinia'
 
+const authStore = useAuthStore()
+const scheduleStore = useScheduleStore()
+
+// ✅ Используем storeToRefs для реактивности
+const { mergedUsers, schedule, isLoading, error } = storeToRefs(scheduleStore)
+
+// Состояния
+const selectedYear = ref(new Date().getFullYear())
+const searchQuery = ref('')
+const filterDept = ref('')
+const isAdmin = computed(() => authStore.user?.roles?.includes('admin'))
+
+// ✅ Проверяем, загружены ли данные
+const isDataLoaded = computed(() => mergedUsers.value && mergedUsers.value.length > 0)
+
+// Загрузка данных при монтировании
+onMounted(async () => {
+
+
+  if (!isDataLoaded.value) {
+    await scheduleStore.fetchAllData()
+  }
+})
+
+// ✅ Функции для производственного календаря
 function getCalendarDays(month: number) {
   return productionCalendar[selectedYear.value]?.calendar[month - 1] ?? '—'
 }
@@ -20,14 +47,7 @@ function getWorkingHours(month: number) {
   return days * 8 - pre
 }
 
-const selectedYear = ref(new Date().getFullYear())
-const searchQuery = ref('')
-const filterDept = ref('')
-
-const { data: summaryData, refresh } = await useFetch(() => 
-  `/api/summary?year=${selectedYear.value}`
-)
-
+// ✅ Месяцы
 const months = [
   { value: '01', label: 'Янв' },
   { value: '02', label: 'Фев' },
@@ -43,34 +63,122 @@ const months = [
   { value: '12', label: 'Дек' },
 ]
 
+// ✅ Формируем данные для таблицы из mergedUsers
+const summaryData = computed(() => {
+  if (!mergedUsers.value || !Array.isArray(mergedUsers.value)) {
+    return []
+  }
+
+  return mergedUsers.value.map((user: any) => {
+    const email = user.email || ''
+    const displayName = user.display_name || user.user_name || email
+    const department = user.department || ''
+    
+    // ✅ Собираем статистику по месяцам
+    const monthsData: Record<string, { vacation: number; sick: number; dayoff: number }> = {}
+    
+    // Инициализируем все месяцы нулями
+    months.forEach(m => {
+      const key = `${selectedYear.value}-${m.value}`
+      monthsData[key] = { vacation: 0, sick: 0, dayoff: 0 }
+    })
+    
+    // ✅ Считаем статусы из schedule
+    if (user.schedule && Array.isArray(user.schedule)) {
+      user.schedule.forEach((item: any) => {
+        const key = `${item.year}-${String(item.month).padStart(2, '0')}`
+        if (item.year === selectedYear.value && monthsData[key]) {
+          if (item.status === 'vacation') monthsData[key].vacation++
+          else if (item.status === 'sick') monthsData[key].sick++
+          else if (item.status === 'day_off') monthsData[key].dayoff++
+        }
+      })
+    }
+    
+    // ✅ Подсчёт итогов
+    let totalVacation = 0
+    let totalSick = 0
+    let totalDayOff = 0
+    
+    Object.values(monthsData).forEach((m: any) => {
+      totalVacation += m.vacation
+      totalSick += m.sick
+      totalDayOff += m.dayoff
+    })
+    
+    // ✅ Остаток отпуска (из vacationBalance)
+    const vacationBalance = user.vacationBalance || {}
+    const carriedOver = vacationBalance[String(selectedYear.value - 1)] || 0
+    const currentYearBalance = vacationBalance[String(selectedYear.value)] || 0
+    const remaining = currentYearBalance - totalVacation
+    
+    return {
+      email,
+      displayName,
+      department,
+      months: monthsData,
+      totalVacation,
+      totalSick,
+      totalDayOff,
+      carriedOver,
+      remaining
+    }
+  })
+})
+
+// ✅ Отделы
 const departments = computed(() => {
   if (!summaryData.value) return []
   const depts = new Set(summaryData.value.map((e: any) => e.department))
-  return Array.from(depts)
+  return Array.from(depts).filter(Boolean).sort()
 })
 
+// ✅ Фильтрация
 const filtered = computed(() => {
   if (!summaryData.value) return []
+  
   return summaryData.value.filter((emp: any) => {
-    const matchSearch = (emp.email ?? '').toLowerCase().includes(searchQuery.value.toLowerCase())
+    const matchSearch = (emp.displayName || emp.email || '')
+      .toLowerCase()
+      .includes(searchQuery.value.toLowerCase())
     const matchDept = filterDept.value === '' || emp.department === filterDept.value
     return matchSearch && matchDept
   })
 })
 
-function getMonthKey(month: string) {
-  return `${selectedYear.value}-${month}`
-}
-
+// ✅ Получение данных по месяцу
 function getMonthData(emp: any, month: string) {
-  return emp.months[getMonthKey(month)] || { vacation: 0, sick: 0, dayoff: 0 }
+  const key = `${selectedYear.value}-${month}`
+  return emp.months[key] || { vacation: 0, sick: 0, dayoff: 0 }
 }
+// ✅ Годы для выбора
+const years = computed(() => {
+  const current = new Date().getFullYear()
+  return [current - 1, current, current + 1]
+})
 
-watch(selectedYear, () => refresh())
+// ✅ Перезагрузка при смене года
+watch(selectedYear, async () => {
+  // Обновляем данные при смене года
+  if (!isDataLoaded.value) {
+    await scheduleStore.fetchAllData()
+  }
+})
+
+// ✅ Обновление при загрузке данных
+watch(() => isDataLoaded.value, (loaded) => {
+  if (loaded) {
+    // Данные загружены, можно отображать
+  }
+})
+
+// ✅ Прелоадер
+const isLoadingData = computed(() => scheduleStore.isLoading)
 </script>
 
 <template>
   <div class="summary-page">
+    <!-- Фильтры -->
     <div class="summary-filters">
       <input
         v-model="searchQuery"
@@ -81,15 +189,28 @@ watch(selectedYear, () => refresh())
         <option value="">Все отделы</option>
         <option v-for="d in departments" :key="d" :value="d">{{ d }}</option>
       </select>
-        <select v-model="selectedYear" class="filter-select" @change="refresh()">
-        <option v-for="y in [selectedYear - 1, selectedYear, selectedYear + 1]" :key="y" :value="y">
-            {{ y }}
-        </option>
-        </select>
+      <select v-model="selectedYear" class="filter-select">
+        <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
+      </select>
     </div>
 
+    <!-- Таблица -->
     <div class="table-wrap">
-      <table>
+      <!-- Прелоадер -->
+      <div v-if="isLoadingData" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Загрузка...</span>
+        </div>
+        <p class="mt-2 text-muted">Загрузка данных...</p>
+      </div>
+
+      <!-- Ошибка -->
+      <div v-else-if="error" class="alert alert-danger m-3">
+        {{ error }}
+      </div>
+
+      <!-- Таблица -->
+      <table v-else>
         <thead>
           <tr>
             <th class="col-name" rowspan="3">Ф.И.О.</th>
@@ -112,12 +233,12 @@ watch(selectedYear, () => refresh())
             <template v-for="m in months" :key="m.value">
               <td colspan="3" class="prod-info-cell">
                 <div class="prod-info-row">
-                  <span class="prod-info-item">📅 {{ getCalendarDays(m.value) }} кал.</span>
-                  <span class="prod-info-item working">💼 {{ getWorkingDays(m.value) }} раб.</span>
+                  <span class="prod-info-item">📅 {{ getCalendarDays(Number(m.value)) }} кал.</span>
+                  <span class="prod-info-item working">💼 {{ getWorkingDays(Number(m.value)) }} раб.</span>
                 </div>
                 <div class="prod-info-row">
-                  <span class="prod-info-item preholiday">🎉 {{ getPreHolidays(m.value) }} пред.</span>
-                  <span class="prod-info-item hours">⏱ {{ getWorkingHours(m.value) }} ч.</span>
+                  <span class="prod-info-item preholiday">🎉 {{ getPreHolidays(Number(m.value)) }} пред.</span>
+                  <span class="prod-info-item hours">⏱ {{ getWorkingHours(Number(m.value)) }} ч.</span>
                 </div>
               </td>
             </template>
@@ -133,19 +254,15 @@ watch(selectedYear, () => refresh())
         <tbody>
           <template v-if="filtered.length">
             <tr v-for="(emp, index) in filtered" :key="index">
-              <td class="col-name">{{ emp.email }}</td>
-              <td class="col-dept">{{ emp.department }}</td>
-              <td class="col-num col-carried">{{ emp.days_carried_over }}</td>
-              <td class="col-num col-remaining" :class="{ negative: emp.days_remaining < 0 }">
-                {{ emp.days_remaining }}
+              <td class="col-name">{{ emp.displayName || emp.email }}</td>
+              <td class="col-dept">{{ emp.department || 'Без отдела' }}</td>
+              <td class="col-num col-carried">{{ emp.carriedOver }}</td>
+              <td class="col-num col-remaining" :class="{ negative: emp.remaining < 0 }">
+                {{ emp.remaining }}
               </td>
-              <td class="col-num col-used">{{ emp.days_used }}</td>
-              <td class="col-num sick-total">
-                {{ Object.values(emp.months).reduce((s: any, m: any) => s + Number(m.sick), 0) }}
-              </td>
-              <td class="col-num dayoff-total">
-                {{ Object.values(emp.months).reduce((s: any, m: any) => s + Number(m.dayoff), 0) }}
-              </td>
+              <td class="col-num col-used">{{ emp.totalVacation }}</td>
+              <td class="col-num sick-total">{{ emp.totalSick }}</td>
+              <td class="col-num dayoff-total">{{ emp.totalDayOff }}</td>
               <template v-for="m in months" :key="m.value">
                 <td class="col-sub vacation">
                   {{ getMonthData(emp, m.value).vacation || '' }}
@@ -161,7 +278,7 @@ watch(selectedYear, () => refresh())
           </template>
           <tr v-else>
             <td :colspan="7 + months.length * 3" class="no-results">
-              Ничего не найдено
+              {{ searchQuery || filterDept ? 'Ничего не найдено' : 'Нет данных' }}
             </td>
           </tr>
         </tbody>
@@ -171,7 +288,6 @@ watch(selectedYear, () => refresh())
 </template>
 
 <style scoped>
-
 .summary-page {
   padding: 20px 24px;
 }
@@ -241,13 +357,19 @@ th.col-name {
   padding-left: 12px;
 }
 
-th.col-dept { text-align: left; min-width: 160px; padding-left: 12px; }
+th.col-dept { 
+  text-align: left; 
+  min-width: 160px; 
+  padding-left: 12px; 
+}
+
 th.col-num { min-width: 55px; }
 th.col-month { min-width: 80px; }
 th.col-sub { min-width: 30px; font-weight: 400; }
 
 td.col-carried { background: #F5F0FF; color: #3B1F6B; }
 td.col-remaining { background: #F1F8F1; color: #1B5E20; }
+td.col-remaining.negative { color: #dc2626; background: #FEF2F2; }
 td.col-used { background: #FAF5FF; color: #5B21B6; }
 
 th.vacation { background: #E6F1FB; color: #0C447C; }
@@ -273,7 +395,12 @@ td.col-name {
   box-shadow: 2px 0 4px rgba(0,0,0,0.06);
 }
 
-td.col-dept { text-align: left; padding-left: 12px; color: #6b7280; }
+td.col-dept { 
+  text-align: left; 
+  padding-left: 12px; 
+  color: #6b7280; 
+}
+
 td.col-sub.vacation { background: #F0F7FF; color: #0C447C; }
 td.col-sub.sick     { background: #FFF4F0; color: #712B13; }
 td.col-sub.dayoff   { background: #FFFAF0; color: #633806; }
@@ -290,8 +417,18 @@ td.dayoff-total     { background: #FFFAF0; color: #633806; font-weight: 500; }
   text-align: center;
 }
 
-.prod-info-row { display: flex; justify-content: center; gap: 8px; white-space: nowrap; }
-.prod-info-item { font-size: 11px; color: #6b7280; }
+.prod-info-row { 
+  display: flex; 
+  justify-content: center; 
+  gap: 8px; 
+  white-space: nowrap; 
+}
+
+.prod-info-item { 
+  font-size: 11px; 
+  color: #6b7280; 
+}
+
 .prod-info-item.working   { color: #27500A; }
 .prod-info-item.preholiday { color: #993C1D; }
 .prod-info-item.hours     { color: #185FA5; }

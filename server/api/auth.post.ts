@@ -5,7 +5,9 @@ export default defineEventHandler(async (event) => {
   const body = await readBody(event)
   const { email } = body
 
-  const employee = await db.collection('timesheet').findOne({ email })
+  //const employee = await db.collection('timesheet').findOne({ email })
+
+  const employee = await db.collection('users').findOne({ email })
 
   if (!employee) {
     throw createError({ statusCode: 401, message: 'Пользователь не найден' })
@@ -14,7 +16,7 @@ export default defineEventHandler(async (event) => {
   return {
     id: employee._id.toString(),
     email: employee.email,
-    role: employee.role,
+    roles: employee.roles,
     department: employee.department
   }
 })
